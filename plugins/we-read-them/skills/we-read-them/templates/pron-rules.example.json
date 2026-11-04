@@ -1,0 +1,61 @@
+{
+ "name": "What the record says",
+ "description": "Spoken forms for the Gabby Petito film and reels. Screen text keeps the real spelling.",
+ "rules": [
+  {
+   "string_to_replace": "Laundrie",
+   "type": "alias",
+   "alias": "Lawndree"
+  },
+  {
+   "string_to_replace": "Laundries",
+   "type": "alias",
+   "alias": "Lawndrees"
+  },
+  {
+   "string_to_replace": "Misc",
+   "type": "alias",
+   "alias": "miscellaneous"
+  },
+  {
+   "string_to_replace": "MISC",
+   "type": "alias",
+   "alias": "miscellaneous"
+  },
+  {
+   "string_to_replace": "misc",
+   "type": "alias",
+   "alias": "miscellaneous"
+  },
+  {
+   "string_to_replace": "USPS",
+   "type": "alias",
+   "alias": "U.S.P.S."
+  },
+  {
+   "string_to_replace": "FD-597",
+   "type": "alias",
+   "alias": "F D five ninety-seven"
+  },
+  {
+   "string_to_replace": "FD-302",
+   "type": "alias",
+   "alias": "F D three oh two"
+  },
+  {
+   "string_to_replace": "S.B. 117",
+   "type": "alias",
+   "alias": "Senate Bill one seventeen"
+  },
+  {
+   "string_to_replace": "Bethune",
+   "type": "alias",
+   "alias": "buh-thoon"
+  },
+  {
+   "string_to_replace": "Myakkahatchee",
+   "type": "alias",
+   "alias": "my-ah-kah-hatchee"
+  }
+ ]
+}

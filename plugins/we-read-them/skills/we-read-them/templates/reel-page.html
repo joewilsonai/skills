@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Reel 10: Her card made it home</title>
+<style>
+@font-face{font-family:Sans;src:url(fonts/sans400.woff2) format('woff2');font-weight:400;font-display:block}
+@font-face{font-family:Sans;src:url(fonts/sans700.woff2) format('woff2');font-weight:700;font-display:block}
+@font-face{font-family:Mono;src:url(fonts/mono400.woff2) format('woff2');font-weight:400;font-display:block}
+@font-face{font-family:Mono;src:url(fonts/mono600.woff2) format('woff2');font-weight:600;font-display:block}
+@font-face{font-family:SerifI;src:url(fonts/serifi.woff2) format('woff2');font-style:italic;font-weight:400;font-display:block}
+html,body{margin:0;background:#0B0C0E;overflow:hidden}canvas{display:block}
+</style></head><body><canvas id="c" width="1080" height="1920"></canvas>
+<script>
+// Reel 10 (vertical): "He was charged with her murder." vs. the only charge, and the card that went home without her.
+const W = 1080, H = 1920, cv = document.getElementById('c'), x = cv.getContext('2d');
+const C = { bg:'#0B0C0E', panel:'#141619', line:'#2E3238', text:'#ECEAE4', dim:'#8B9097', faint:'#4A4F57', acc:'#FF4A2E', paper:'#E4E0D4', ink:'#1D1D1B' };
+const F = { sans:'Sans', mono:'Mono', it:'SerifI' };
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v)), seg = (t, a, b) => clamp((t - a) / (b - a));
+const eo = k => 1 - Math.pow(1 - k, 3), eio = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2, lerp = (a, b, k) => a + (b - a) * k;
+function rnd(s) { return function () { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+
+let IM = {}, GRAIN = [], FR = 0, REC = null, TK = null, CAP = [];
+async function boot() {
+  TK = await (await fetch('takes.json')).json(); window.DUR = TK.dur + .8;
+  for (const [k, f] of [['p3', 'assets/fbi_p3.png'], ['p81', 'assets/fbi_p81.png']]) IM[k] = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = f; });
+  for (const f of ['700 40px Sans', '400 20px Sans', '400 20px Mono', '600 20px Mono', 'italic 24px SerifI']) await document.fonts.load(f);
+  for (let g = 0; g < 6; g++) { const c = document.createElement('canvas'); c.width = c.height = 256; const gx = c.getContext('2d'), d = gx.createImageData(256, 256), r = rnd(g * 99 + 7);
+    for (let i = 0; i < d.data.length; i += 4) { const v = 128 + (r() + r() + r() - 1.5) * 120; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; } gx.putImageData(d, 0, 0); GRAIN.push(c); }
+  const fix = s => s.replace(/Number ten\./, 'Number 10.').replace(/August thirtieth/, 'August 30').replace(/September first/, 'September 1').replace(/Three a\.m\./, '3 a.m.').replace(/Fourteen dollars and ten cents/, '$14.10');
+  for (const k of TK.takes) { const toks = fix(k.text).replace(/…/g, '… ').split(/\s+/).filter(Boolean); const n = toks.length, w = k.words, m = w.length;
+    const at = j => m ? w[Math.min(m - 1, Math.round(j * (m - 1) / Math.max(1, n - 1)))][1] : k.t0 + (k.t1 - k.t0) * j / n;
+    let cur = [], s0 = 0; toks.forEach((tk, j) => { cur.push(tk); const s = cur.join(' '); const rest = toks.slice(j + 1).join(' ');
+      if (j < n - 1 && rest.length < 12 && (s + ' ' + rest).length <= 34) return;
+      if (s.length > 24 || (/[.!?]$/.test(tk) && s.length > 8) || j === n - 1) { CAP.push([at(s0), j === n - 1 ? k.t1 + .3 : at(j + 1), s, k.who === 'R']); cur = []; s0 = j + 1; } }); }
+  for (let i = 0; i < CAP.length - 1; i++) CAP[i][1] = Math.min(CAP[i][1], CAP[i + 1][0]);
+  window.READY = true;
+}
+function tw(s, o = {}) { x.save(); x.font = `${o.it ? 'italic ' : ''}${o.w || 400} ${o.s || 24}px ${o.f || F.sans}`; const w = x.measureText(s).width; x.restore(); return w; }
+function txt(s, X, Y, o = {}) { x.save(); x.font = `${o.it ? 'italic ' : ''}${o.w || 400} ${o.s || 24}px ${o.f || F.sans}`; x.fillStyle = o.c || C.text; x.globalAlpha *= (o.a ?? 1);
+  x.textAlign = o.al || 'left'; if (o.shadow) { x.shadowColor = 'rgba(0,0,0,.95)'; x.shadowBlur = 14; } x.fillText(s, X, Y); const w = x.measureText(s).width; const ga = x.globalAlpha; x.restore();
+  if (REC && o.id && ga > .5) { const sz = o.s || 24, x0 = o.al === 'center' ? X - w / 2 : o.al === 'right' ? X - w : X; REC.push({ id: o.id, text: s, x0, y0: Y - sz * .9, x1: x0 + w, y1: Y + sz * .25 }); } return w; }
+function wrap(s, maxW, o) { const t = s.split(/(?<= )/); const out = []; let l = ''; for (const k of t) { if (tw(l + k, o) > maxW && l) { out.push(l.trimEnd()); l = k.trimStart(); } else l += k; } if (l) out.push(l); return out; }
+function hair(x0, y0, x1, y1, c = C.line, w = 1) { x.save(); x.strokeStyle = c; x.lineWidth = w; x.beginPath(); x.moveTo(x0, y0); x.lineTo(x1, y1); x.stroke(); x.restore(); }
+function fill(X, Y, w, h, c) { x.fillStyle = c; x.fillRect(X, Y, w, h); }
+function rect(X, Y, w, h, c = C.line) { x.save(); x.strokeStyle = c; x.strokeRect(X + .5, Y + .5, w - 1, h - 1); x.restore(); }
+function flash(t, at, X, Y, w, h, d = .12) { if (t < at) return; const k = 1 - seg(t, at, at + d); if (k <= 0) return; x.save(); x.globalAlpha = k * .9; fill(X, Y, w, h, '#fff'); x.restore(); }
+function grain(X, Y, w, h, a) { x.save(); x.beginPath(); x.rect(X, Y, w, h); x.clip(); x.globalCompositeOperation = 'overlay'; x.globalAlpha = a; const g = GRAIN[FR % 6];
+  for (let gy = Y; gy < Y + h; gy += 256) for (let gx = X; gx < X + w; gx += 256) x.drawImage(g, gx, gy); x.restore(); }
+function tag(s, X, Y, o = {}) { txt(s, X + 16, Y, { s: o.s || 24, f: F.mono, c: o.c || C.dim, w: 600, a: o.a ?? 1, id: o.id }); x.save(); x.globalAlpha *= o.a ?? 1; fill(X, Y - 17, 7, 18, C.acc); x.restore(); }
+function ring(cx, cy, r, k) { if (k <= 0) return; x.save(); x.strokeStyle = C.acc; x.lineWidth = 4; x.beginPath(); x.ellipse(cx, cy, r * 1.9, r, 0, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * eo(k)); x.stroke(); x.restore(); }
+// the receipt page: source rect around (fx, fy) at zoom z, into panel; returns source-fraction -> screen
+function page(img, X, Y, w, h, fx, fy, z) { const IM = img; const iw = IM.width, ih = IM.height; let sw = iw / z, sh = sw * h / w; if (sh > ih) { sh = ih; sw = sh * w / h; }
+  const sx = clamp(iw * fx - sw / 2, 0, iw - sw), sy = clamp(ih * fy - sh / 2, 0, ih - sh);
+  x.save(); fill(X, Y, w, h, '#000'); x.filter = 'grayscale(1) contrast(1.05) brightness(0.86)'; x.drawImage(IM, sx, sy, sw, sh, X, Y, w, h); x.restore(); grain(X, Y, w, h, .1); rect(X, Y, w, h);
+  const k = w / sw; return (u, v) => [X + (u * iw - sx) * k, Y + (v * ih - sy) * k]; }
+
+
+
+function caption(t) { for (const [a, b, s, rd] of CAP) if (t >= a && t < b) {
+  const o = { s: 60, w: 700 }; const ls = wrap(s, 960, o);
+  if (rd) txt('read from the record', W / 2, 1560, { s: 26, f: F.mono, c: C.acc, al: 'center', w: 600, shadow: 1 });
+  ls.forEach((l, i) => txt(l, W / 2, 1640 + i * 74, { ...o, al: 'center', shadow: 1, c: rd ? '#FFD9D2' : C.text, id: 'cap' + i })); } }
+const T = i => TK.takes[i];
+const MB = [60, 760, 960, 640, -113, -77, 25, 46];
+function proj(lo, la) { const [x0, y0, w, h, a, b, c, d] = MB; return [x0 + (lo - a) / (b - a) * w, y0 + (d - la) / (d - c) * h]; }
+function pin(px, py, label, sub, o = {}) { x.save(); x.fillStyle = o.c || C.text; x.globalAlpha *= o.a ?? 1; x.beginPath(); x.arc(px, py, 11, 0, 7); x.fill(); x.restore();
+  const al = o.al || 'left', dx = al === 'left' ? 24 : -24; txt(label, px + dx, py + 10, { s: 36, w: 700, al, a: o.a ?? 1, id: 'pin' + label }); if (sub) txt(sub, px + dx, py + 48, { s: 26, f: F.mono, c: C.dim, al, a: o.a ?? 1 }); }
+function dash(a, b, k, c) { x.save(); x.strokeStyle = c; x.lineWidth = 5; x.setLineDash([16, 10]); x.beginPath(); x.moveTo(a[0], a[1]); x.lineTo(lerp(a[0], b[0], k), lerp(a[1], b[1], k)); x.stroke(); x.restore(); }
+function hlLine(m, u0, u1, v, k, clipR) { const [a0, b0] = m(u0, v - .009), [a1, b1] = m(u1, v + .009);
+  x.save(); x.beginPath(); x.rect(...clipR); x.clip(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = .6; fill(a0, b0, (a1 - a0) * eo(k), b1 - b0, C.acc); x.restore(); }
+window.render = function (t) {
+  FR = Math.floor(t * 30); fill(0, 0, W, H, C.bg);
+  txt('WE READ THEM', 60, 120, { s: 26, f: F.mono, w: 600, c: C.dim, id: 'hd' }); txt('Gabby Petito, 2021', 60, 160, { s: 26, f: F.mono, c: C.faint });
+  // number + claim, struck when the record answers it
+  const strike = T(1).t1 - .2;
+  txt('10', 60, 400, { s: 220, w: 700, f: F.mono, c: C.acc, id: 'num' });
+  if (t >= T(0).t1) { const o = { s: 60, w: 700 }, ls = ['“He was charged', 'with her murder.”'];
+    ls.forEach((l, i) => txt(l, 60, 520 + i * 76, { ...o, c: t >= strike ? C.dim : C.text, a: seg(t, T(0).t1, T(0).t1 + .1), id: 'claim' + i }));
+    if (t >= strike) { const k = eo(seg(t, strike, strike + .35)); ls.forEach((l, i) => { const ww = tw(l, o); hair(54, 520 + i * 76 - 20, 54 + (ww + 12) * k, 520 + i * 76 - 20, C.acc, 6); }); } }
+  const tMap = T(3).t0, tRiv = T(4).t0, tRead = T(5).t0, tGnv = T(6).t0, tEnd = T(7).t0;
+  if (t >= T(2).t0 && t < tMap) { flash(t, T(2).t0, 0, 700, W, 760, .14); // the only charge
+    txt('1', 60, 1130, { s: 380, w: 700, f: F.mono, c: C.acc, id: 'one' });
+    txt('federal charge, ever', 330, 960, { s: 52, w: 700, id: 'fc' }); txt('using her debit card', 330, 1030, { s: 44, c: C.dim, id: 'dc', a: seg(t, T(2).t0 + 1.4, T(2).t0 + 1.5) });
+    txt('$1,000 or more', 330, 1100, { s: 40, f: F.mono, c: C.dim, a: seg(t, T(2).t0 + 2.0, T(2).t0 + 2.1), id: 'thr' });
+    tag('U.S. District Court, Wyoming · warrant Sept. 22, 2021', 60, 1250, { s: 24 }); }
+  if (t >= tMap && t < tRead) { // the drive home
+    const [x0, y0, w, h] = MB; x.save(); x.globalAlpha = .7; for (let lo = -110; lo <= -78; lo += 5) { const [px] = proj(lo, 30); hair(px, y0, px, y0 + h, '#1c1f23'); }
+    for (let la = 25; la <= 46; la += 5) { const [, py] = proj(-100, la); hair(x0, py, x0 + w, py, '#1c1f23'); } x.restore(); rect(x0, y0, w, h); tag('Schematic · her card, Aug. 30–Sept. 1, 2021', 60, 740);
+    const R = proj(-108.38, 43.02), G = proj(-82.32, 29.65), N = proj(-82.24, 27.04);
+    const k = eo(seg(t, tMap + .4, tMap + 2.6)); dash(R, G, k, C.acc); pin(...R, 'Riverton, Wyo.', 'Aug. 30', { a: t >= tRiv ? 1 : .55 });
+    if (k >= 1) { pin(...G, 'Gainesville, Fla.', 'Sept. 1, 3 a.m.', { al: 'right', c: C.acc }); dash(G, N, eo(seg(t, tMap + 2.6, tMap + 3.2)), C.acc); }
+    if (t >= tRiv) { txt('Aug. 30, 2021', 60, 1490, { s: 64, w: 600, f: F.mono, a: seg(t, tRiv, tRiv + .1), id: 'd30' }); } }
+  if (t >= tRead && t < tGnv) { flash(t, tRead, 0, 700, W, 640); const m = page(IM.p3, 0, 700, W, 640, .5, .65, 1.55);
+    hlLine(m, .08, .92, .6256, seg(t, tRead + .2, tRead + 1.6), [0, 700, W, 640]); hlLine(m, .08, .92, .648, seg(t, tRead + 1.6, tRead + 3.4), [0, 700, W, 640]); hlLine(m, .1, .5, .670, seg(t, tRead + 3.4, tRead + 4.6), [0, 700, W, 640]);
+    tag('FBI opening memo, Sept. 15, 2021 · Vault part 01, p. 3', 60, 680, {}); }
+  if (t >= tGnv && t < tEnd) { flash(t, tGnv, 0, 700, W, 560); const m = page(IM.p81, 0, 700, W, 560, .5, .42, 1.25);
+    hlLine(m, .08, .91, .4537, seg(t, tGnv + 2.2, tGnv + 2.9), [0, 700, W, 560]); hlLine(m, .08, .91, .3793, seg(t, tGnv + 4.0, tGnv + 4.7), [0, 700, W, 560]);
+    tag('FBI FD-302, Gainesville Circle K · Vault part 01, p. 81', 60, 680, {});
+    if (t >= tGnv + 2.2) { txt('03:00:17', 60, 1360, { s: 96, w: 600, f: F.mono, a: seg(t, tGnv + 2.2, tGnv + 2.3), id: 'clk' }); txt('a.m., Sept. 1', 560, 1360, { s: 34, f: F.mono, c: C.dim, a: seg(t, tGnv + 2.2, tGnv + 2.3) }); }
+    if (t >= tGnv + 4.0) { txt('$14.10', 60, 1480, { s: 110, w: 700, f: F.mono, c: C.acc, a: seg(t, tGnv + 4.0, tGnv + 4.1), id: 'amt' }); txt('on her card', 500, 1480, { s: 34, f: F.mono, c: C.dim, a: seg(t, tGnv + 4.0, tGnv + 4.1) }); } }
+  if (t >= tEnd) { const m = page(IM.p81, 0, 700, W, 560, .5, .42, 1.25); x.save(); x.globalAlpha = .82 * seg(t, tEnd, tEnd + .3); fill(0, 700, W, 560, C.bg); x.restore();
+    txt('Her card made it', 60, 900, { s: 84, w: 700, a: seg(t, tEnd, tEnd + .1), id: 'e1' }); txt('home to Florida.', 60, 1000, { s: 84, w: 700, a: seg(t, tEnd, tEnd + .1), id: 'e2' });
+    const sd = T(7).words.find(w => /didn/i.test(w[0])); const ts = sd ? sd[1] - .25 : tEnd + 2;
+    if (t >= ts) txt('She didn’t.', 60, 1150, { s: 110, w: 700, c: C.acc, a: seg(t, ts, ts + .1), id: 'e3' }); }
+  if (t < tEnd) caption(t);
+  if (t >= TK.dur - .4) txt('Full film: We Read Them', W / 2, 1800, { s: 30, f: F.mono, w: 600, c: C.dim, al: 'center' });
+};
+window.TEXTS = t => { REC = []; window.render(t); const r = REC; REC = null; return r; };
+boot();
+</script></body></html>

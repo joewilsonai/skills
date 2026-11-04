@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Reel 0: What the record says</title>
+<style>
+@font-face{font-family:Sans;src:url(fonts/sans400.woff2) format('woff2');font-weight:400;font-display:block}
+@font-face{font-family:Sans;src:url(fonts/sans700.woff2) format('woff2');font-weight:700;font-display:block}
+@font-face{font-family:Mono;src:url(fonts/mono400.woff2) format('woff2');font-weight:400;font-display:block}
+@font-face{font-family:Mono;src:url(fonts/mono600.woff2) format('woff2');font-weight:600;font-display:block}
+@font-face{font-family:SerifI;src:url(fonts/serifi.woff2) format('woff2');font-style:italic;font-weight:400;font-display:block}
+html,body{margin:0;background:#0B0C0E;overflow:hidden}canvas{display:block}
+</style></head><body><canvas id="c" width="1080" height="1920"></canvas>
+<script>
+// Reel 0 (vertical): series intro. The trip, the attention, the file, the tease. Visual Investigation style, 1080x1920.
+const W = 1080, H = 1920, cv = document.getElementById('c'), x = cv.getContext('2d');
+const C = { bg:'#0B0C0E', panel:'#141619', line:'#2E3238', text:'#ECEAE4', dim:'#8B9097', faint:'#4A4F57', acc:'#FF4A2E', paper:'#E4E0D4', ink:'#1D1D1B' };
+const F = { sans:'Sans', mono:'Mono', it:'SerifI' };
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v)), seg = (t, a, b) => clamp((t - a) / (b - a));
+const eo = k => 1 - Math.pow(1 - k, 3), eio = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2, lerp = (a, b, k) => a + (b - a) * k;
+function rnd(s) { return function () { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+let WALL = null, IM = {}, GRAIN = [], FR = 0, REC = null, TK = null, CAP = [];
+async function boot() {
+  TK = await (await fetch('takes.json')).json(); window.DUR = TK.dur + .8;
+  WALL = await (await fetch('assets/wall.json')).json();
+  for (const [k, f] of [['rec', 'assets/fbi_p292.png'], ['p28', 'assets/fbi5_p28.png'], ['wall', 'assets/wall.jpg']]) IM[k] = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = f; });
+  for (const f of ['700 40px Sans', '400 20px Sans', '400 20px Mono', '600 20px Mono', 'italic 24px SerifI']) await document.fonts.load(f);
+  for (let g = 0; g < 6; g++) { const c = document.createElement('canvas'); c.width = c.height = 256; const gx = c.getContext('2d'), d = gx.createImageData(256, 256), r = rnd(g * 99 + 7);
+    for (let i = 0; i < d.data.length; i += 4) { const v = 128 + (r() + r() + r() - 1.5) * 120; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; } gx.putImageData(d, 0, 0); GRAIN.push(c); }
+  // captions: script words, timed across each take in chunks of up to ~26 characters
+  for (const k of TK.takes) { const toks = k.text.replace(/…/g, '… ').split(/\s+/).filter(Boolean); const n = toks.length, w = k.words, m = w.length;
+    const at = j => m ? w[Math.min(m - 1, Math.round(j * (m - 1) / Math.max(1, n - 1)))][1] : k.t0 + (k.t1 - k.t0) * j / n;
+    let cur = [], s0 = 0; toks.forEach((tk, j) => { cur.push(tk); const s = cur.join(' ');
+      const rest = toks.slice(j + 1).join(' '); if (j < n - 1 && rest.length < 12 && (s + ' ' + rest).length <= 34) return;
+      if (s.length > 24 || (/[.!?]$/.test(tk) && s.length > 8) || j === n - 1) { CAP.push([at(s0), j === n - 1 ? k.t1 + .3 : at(j + 1), s.replace(/twenty twenty-one/, '2021').replace(/twenty-two/, '22').replace(/^Ten things/, '10 things').replace(/number ten/, 'number 10').replace(/are ten things/, 'are 10 things').replace(/September first/, 'September 1st').replace(/Six hundred fifty million/, '650 million')]); cur = []; s0 = j + 1; } }); }
+  for (let i = 0; i < CAP.length - 1; i++) CAP[i][1] = Math.min(CAP[i][1], CAP[i + 1][0]);
+  window.READY = true;
+}
+function tw(s, o = {}) { x.save(); x.font = `${o.it ? 'italic ' : ''}${o.w || 400} ${o.s || 24}px ${o.f || F.sans}`; const w = x.measureText(s).width; x.restore(); return w; }
+function txt(s, X, Y, o = {}) { x.save(); x.font = `${o.it ? 'italic ' : ''}${o.w || 400} ${o.s || 24}px ${o.f || F.sans}`; x.fillStyle = o.c || C.text; x.globalAlpha *= (o.a ?? 1);
+  x.textAlign = o.al || 'left'; if (o.shadow) { x.shadowColor = 'rgba(0,0,0,.95)'; x.shadowBlur = 14; } x.fillText(s, X, Y); const w = x.measureText(s).width; const ga = x.globalAlpha; x.restore();
+  if (REC && o.id && ga > .5) { const sz = o.s || 24, x0 = o.al === 'center' ? X - w / 2 : o.al === 'right' ? X - w : X; REC.push({ id: o.id, text: s, x0, y0: Y - sz * .9, x1: x0 + w, y1: Y + sz * .25 }); } return w; }
+function wrap(s, maxW, o) { const t = s.split(/(?<= )/); const out = []; let l = ''; for (const k of t) { if (tw(l + k, o) > maxW && l) { out.push(l.trimEnd()); l = k.trimStart(); } else l += k; } if (l) out.push(l); return out; }
+function hair(x0, y0, x1, y1, c = C.line, w = 1) { x.save(); x.strokeStyle = c; x.lineWidth = w; x.beginPath(); x.moveTo(x0, y0); x.lineTo(x1, y1); x.stroke(); x.restore(); }
+function fill(X, Y, w, h, c) { x.fillStyle = c; x.fillRect(X, Y, w, h); }
+function rect(X, Y, w, h, c = C.line) { x.save(); x.strokeStyle = c; x.strokeRect(X + .5, Y + .5, w - 1, h - 1); x.restore(); }
+function flash(t, at, X, Y, w, h, d = .12) { if (t < at) return; const k = 1 - seg(t, at, at + d); if (k <= 0) return; x.save(); x.globalAlpha = k * .9; fill(X, Y, w, h, '#fff'); x.restore(); }
+function grain(X, Y, w, h, a) { x.save(); x.beginPath(); x.rect(X, Y, w, h); x.clip(); x.globalCompositeOperation = 'overlay'; x.globalAlpha = a; const g = GRAIN[FR % 6];
+  for (let gy = Y; gy < Y + h; gy += 256) for (let gx = X; gx < X + w; gx += 256) x.drawImage(g, gx, gy); x.restore(); }
+function tag(s, X, Y, o = {}) { txt(s, X + 16, Y, { s: o.s || 24, f: F.mono, c: o.c || C.dim, w: 600, a: o.a ?? 1, id: o.id }); x.save(); x.globalAlpha *= o.a ?? 1; fill(X, Y - 17, 7, 18, C.acc); x.restore(); }
+function ring(cx, cy, r, k) { if (k <= 0) return; x.save(); x.strokeStyle = C.acc; x.lineWidth = 4; x.beginPath(); x.ellipse(cx, cy, r * 1.9, r, 0, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * eo(k)); x.stroke(); x.restore(); }
+// the receipt page: source rect around (fx, fy) at zoom z, into panel; returns source-fraction -> screen
+function page(img, X, Y, w, h, fx, fy, z) { const IM = img; const iw = IM.width, ih = IM.height; let sw = iw / z, sh = sw * h / w; if (sh > ih) { sh = ih; sw = sh * w / h; }
+  const sx = clamp(iw * fx - sw / 2, 0, iw - sw), sy = clamp(ih * fy - sh / 2, 0, ih - sh);
+  x.save(); fill(X, Y, w, h, '#000'); x.filter = 'grayscale(1) contrast(1.05) brightness(0.86)'; x.drawImage(IM, sx, sy, sw, sh, X, Y, w, h); x.restore(); grain(X, Y, w, h, .1); rect(X, Y, w, h);
+  const k = w / sw; return (u, v) => [X + (u * iw - sx) * k, Y + (v * ih - sy) * k]; }
+
+
+function caption(t) { for (const [a, b, s] of CAP) if (t >= a && t < b) {
+  const o = { s: 62, w: 700 }; const ls = wrap(s, 940, o); ls.forEach((l, i) => txt(l, W / 2, 1640 + i * 76, { ...o, al: 'center', shadow: 1, id: 'cap' + i })); } }
+const T = i => TK.takes[i];
+const word = (i, w) => (T(i).words.find(x => x[0].replace(/[.,?]/g, '').toLowerCase() === w) || [0, T(i).t0])[1];
+// schematic projection of the U.S. (no borders)
+const MB = [60, 330, 960, 900, -126, -68, 24, 48];
+function proj(lo, la) { const [x0, y0, w, h, a, b, c, d] = MB; return [x0 + (lo - a) / (b - a) * w, y0 + (d - la) / (d - c) * h]; }
+const ROUTE = [['Blue Point, N.Y.', -73.03, 40.74, 'July 2'], ['Moab, Utah', -109.55, 38.57, 'Aug. 12'], ['Spread Creek, Wyo.', -110.57, 43.77, 'Aug. 27'], ['North Port, Fla.', -82.24, 27.04, 'Sept. 1']];
+function pin(px, py, label, sub, o = {}) { x.save(); x.fillStyle = o.c || C.text; x.globalAlpha *= o.a ?? 1; x.beginPath(); x.arc(px, py, 10, 0, 7); x.fill(); x.restore();
+  const al = o.al || 'left', dx = al === 'left' ? 22 : -22; txt(label, px + dx, py + 10, { s: 34, w: 700, al, a: o.a ?? 1, id: 'pin' + label }); if (sub) txt(sub, px + dx, py + 46, { s: 24, f: F.mono, c: C.dim, al, a: o.a ?? 1 }); }
+function dash(a, b, k, c) { x.save(); x.strokeStyle = c; x.lineWidth = 4; x.setLineDash([14, 9]); x.beginPath(); x.moveTo(a[0], a[1]); x.lineTo(lerp(a[0], b[0], k), lerp(a[1], b[1], k)); x.stroke(); x.restore(); }
+function map(t) { const [x0, y0, w, h] = MB; x.save(); x.globalAlpha = .7; for (let lo = -125; lo <= -70; lo += 5) { const [px] = proj(lo, 30); hair(px, y0, px, y0 + h, '#1c1f23'); }
+  for (let la = 25; la <= 48; la += 5) { const [, py] = proj(-100, la); hair(x0, py, x0 + w, py, '#1c1f23'); } x.restore(); rect(x0, y0, w, h);
+  tag('Schematic · the trip, July–Sept. 2021', 60, 310);
+  const P = ROUTE.map(r => proj(r[1], r[2])); const k = eo(seg(t, T(0).t0 + .6, T(0).t1 - .4)) * 2;
+  for (let i = 0; i < 2; i++) { const kk = clamp(k - i); if (kk > 0) dash(P[i], P[i + 1], kk, C.text); }
+  pin(...P[0], ROUTE[0][0], ROUTE[0][3], { al: 'right' }); if (k > 1) pin(...P[1], ROUTE[1][0], ROUTE[1][3], { a: seg(k, 1, 1.05) }); if (k >= 2) pin(...P[2], ROUTE[2][0], ROUTE[2][3], { a: seg(k, 1.99, 2) });
+  const th = word(1, 'home'); if (t >= th) { const kr = eo(seg(t, th, th + 1.3)); dash(P[2], P[3], kr, C.acc); if (kr >= 1) pin(...P[3], ROUTE[3][0], 'Sept. 1 · he comes home alone', { c: C.acc, al: 'right' }); } }
+const STATS = [['650M+', 'views of #GabbyPetito', 'on TikTok', 'USA Today, Sept. 2021'], ['\u22483\u00d7', 'Google searches for her', 'in a single day, Sept. 14', 'Google Trends via Business Insider'],
+  ['No. 3', 'Google\u2019s top searches', 'in America, all of 2021', 'Google Year in Search via Patch']];
+window.render = function (t) {
+  FR = Math.floor(t * 30); fill(0, 0, W, H, C.bg);
+  const tEnd0 = TK.takes[12].t0; if (t < tEnd0 || t >= TK.takes[13].t0) { txt('WE READ THEM', 60, 120, { s: 26, f: F.mono, w: 600, c: C.dim, id: 'hd' }); txt('Gabby Petito, 2021', 60, 160, { s: 26, f: F.mono, c: C.faint }); }
+  const tFile = T(7).t0, tBox = T(9).t0, tDad = T(10).t0, tFbi = T(11).t0, tEnd = T(12).t0;
+  if (t < T(4).t0) map(t);
+  else if (t < tFile) { // the attention: one stat per full screen, held through its line and the pause after
+    const i = t < T(5).t0 ? 0 : t < T(6).t0 ? 1 : 2, at = T(4 + i).t0 - .05; const [n, l1, l2, src] = STATS[i];
+    flash(t, at, 0, 300, W, 1100, .14);
+    txt(n, W / 2, 900, { s: n.length > 4 ? 260 : 320, w: 700, f: F.mono, c: C.acc, al: 'center', id: 'st' + i });
+    txt(l1, W / 2, 1040, { s: 56, w: 700, al: 'center', a: seg(t, at + .25, at + .35), id: 'sl' + i });
+    txt(l2, W / 2, 1110, { s: 44, c: C.dim, al: 'center', a: seg(t, at + .25, at + .35), id: 'sm' + i });
+    const sw = tw(src, { s: 24, f: F.mono, w: 600 }); tag(src, W / 2 - sw / 2 - 8, 1200, { s: 24 });
+    for (let j = 0; j < 3; j++) { x.save(); x.fillStyle = j === i ? C.acc : C.faint; x.beginPath(); x.arc(W / 2 - 40 + j * 40, 1290, 9, 0, 7); x.fill(); x.restore(); } }
+  else if (t < tBox) { // the file: a wall of real FBI pages fills in, counting to 1,030; on "We read them" the pages we used light up
+    const { cols, rows, tw: TW, th: TH, key, order } = WALL, n = cols * rows, X0 = 0, Y0 = 330, D = (T(8).t0 + 1.4) - tFile, tw0 = T(8).t1 + .1;
+    const z = 1 + .45 * eio(seg(t, tw0 - .1, tw0 + 1.2)), [fc, fr] = key.receipt, fx = X0 + (fc + .5) * TW, fy = Y0 + (fr + .5) * TH;
+    const S = (px, py) => [fx + (px - fx) * z, fy + (py - fy) * z];
+    x.save(); x.beginPath(); x.rect(0, 300, W, 1110); x.clip(); x.filter = 'brightness(0.9)';
+    let shown = 0;
+    for (let k = 0; k < n; k++) { const slot = order[k], at = tFile + D * Math.pow(k / n, .55); if (t < at) continue; shown++;
+      const c = slot % cols, r = Math.floor(slot / cols), isKey = Object.values(key).some(([kc, kr]) => kc === c && kr === r);
+      const [sx, sy] = S(X0 + c * TW, Y0 + r * TH); x.globalAlpha = (t > tw0 && !isKey ? lerp(1, .35, seg(t, tw0, tw0 + .4)) : 1) * seg(t, at, at + .08);
+      x.drawImage(IM.wall, c * TW, r * TH, TW, TH, sx, sy, TW * z, TH * z); }
+    x.restore(); grain(0, 300, W, 1110, .08);
+    Object.values(key).forEach(([c, r], j) => { const at = tw0 + .15 + j * .3; if (t < at) return; const [sx, sy] = S(X0 + c * TW, Y0 + r * TH);
+      x.save(); x.strokeStyle = C.acc; x.lineWidth = 5; x.strokeRect(sx, sy, TW * z, TH * z); x.restore();
+      x.save(); x.translate(sx + TW * z - 4, sy + 4); x.fillStyle = C.acc; x.fillRect(-18, -18, 36, 36); x.strokeStyle = '#fff'; x.lineWidth = 4; x.beginPath(); x.moveTo(-9, 0); x.lineTo(-2, 8); x.lineTo(10, -8); x.stroke(); x.restore(); });
+    const cnt = Math.round(1030 * shown / n);
+    x.save(); fill(0, 196, W, 150, 'rgba(11,12,14,.88)'); x.restore();
+    txt(cnt.toLocaleString('en-US') + (cnt >= 1030 ? '+' : ''), 60, 300, { s: 110, w: 700, f: F.mono, c: C.acc, id: 'cnt' });
+    txt('pages', 60 + tw(cnt.toLocaleString('en-US') + (cnt >= 1030 ? '+' : ''), { s: 110, w: 700, f: F.mono }) + 24, 300, { s: 54, w: 700, id: 'pgs' });
+    tag('FBI Vault \u00b7 released June\u2013Dec. 2024', 60, 1440, { s: 26 }); }
+  else if (t < tDad) { flash(t, tBox, 0, 700, W, 560); const m = page(IM.rec, 0, 700, W, 560, .38, .405, lerp(1.55, 1.65, seg(t, tBox, tDad)));
+    const [a0, b0] = m(.075, .405), [a1, b1] = m(.69, .425); const hk = eo(seg(t, tBox + .5, tBox + 1.2));
+    x.save(); x.beginPath(); x.rect(0, 700, W, 560); x.clip(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = .6; fill(a0, b0, (a1 - a0) * hk, b1 - b0, C.acc); x.restore();
+    tag('FBI FD-597, receipt for property · Sept. 20, 2021', 60, 680, {}); }
+  else if (t < tFbi) { flash(t, tDad, 60, 640, 960, 520); fill(60, 640, 960, 520, C.paper); grain(60, 640, 960, 520, .1);
+    txt('Q. And what did he say to you?', 100, 720, { s: 28, f: F.mono, c: '#555' });
+    const hk = eo(seg(t, tDad + .3, tDad + 1.0)); x.save(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = .6; fill(96, 860, 820 * hk, 76, C.acc); x.restore();
+    txt('“…and told me things had -- you', 100, 830, { s: 50, f: F.it, it: true, c: C.ink, id: 'q1' }); txt('know, ‘Gabby’s gone’…”', 100, 914, { s: 50, f: F.it, it: true, c: C.ink, id: 'q2' });
+    tag('Deposition · Christopher Laundrie · 2023 · p. 69', 60, 620, {}); }
+  else if (t < tEnd) { flash(t, tFbi, 0, 700, W, 420); const m = page(IM.p28, 0, 700, W, 420, .5, .845, 1.6);
+    const hl = (v, u1, at) => { const [a0, b0] = m(.1, v - .009), [a1, b1] = m(u1, v + .009); const k = eo(seg(t, at, at + .6));
+      x.save(); x.beginPath(); x.rect(0, 700, W, 420); x.clip(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = .6; fill(a0, b0, (a1 - a0) * k, b1 - b0, C.acc); x.restore(); };
+    hl(.8195, .85, tFbi + .4); hl(.8425, .84, tFbi + .9); tag('FBI Tampa, review of a tipped YouTube channel · 2021', 60, 680, {}); }
+  else if (t < T(13).t0) { flash(t, tEnd, 0, 0, W, H, .16); // the series title
+    txt('WE READ', 60, 900, { s: 200, w: 700, id: 'wr1' }); txt('THEM.', 60, 1090, { s: 200, w: 700, c: C.acc, id: 'wr2' });
+    const k = eo(seg(t, tEnd + .3, tEnd + .9)); hair(64, 1150, 64 + 700 * k, 1150, C.acc, 6);
+    txt('Gabby Petito \u00b7 the FBI file', 64, 1220, { s: 40, f: F.mono, c: C.dim, a: seg(t, tEnd + .5, tEnd + .6), id: 'wrs' }); }
+  else { flash(t, T(13).t0, 0, 300, W, 1100);
+    txt('10', 60, 900, { s: 420, w: 700, f: F.mono, c: C.acc, id: 'ten' });
+    txt('things you probably', 64, 1030, { s: 64, w: 700, id: 'tyl1' }); txt('don\u2019t know', 64, 1110, { s: 64, w: 700, id: 'tyl2' }); }
+  if (t < tEnd || t >= T(13).t0 + 5) caption(t);
+};
+window.TEXTS = t => { REC = []; window.render(t); const r = REC; REC = null; return r; };
+boot();
+</script></body></html>

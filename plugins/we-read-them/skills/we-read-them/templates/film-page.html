@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>What the record says: Gabby Petito</title>
+<style>
+@font-face{font-family:Sans;src:url(fonts/sans400.woff2) format('woff2');font-weight:400;font-display:block}
+@font-face{font-family:Sans;src:url(fonts/sans700.woff2) format('woff2');font-weight:700;font-display:block}
+@font-face{font-family:Mono;src:url(fonts/mono400.woff2) format('woff2');font-weight:400;font-display:block}
+@font-face{font-family:Mono;src:url(fonts/mono600.woff2) format('woff2');font-weight:600;font-display:block}
+@font-face{font-family:SerifI;src:url(fonts/serifi.woff2) format('woff2');font-style:italic;font-weight:400;font-display:block}
+html,body{margin:0;background:#0B0C0E;overflow:hidden}canvas{display:block}
+</style></head><body><canvas id="c" width="1920" height="1080"></canvas>
+<script>
+// What the record says: Gabby Petito. Visual Investigation style, Canvas 2D, drawn deterministically by window.render(t).
+// All timing lives in film.json (shared with the mix and the subtitles).
+const W = 1920, H = 1080;
+const cv = document.getElementById('c'), x = cv.getContext('2d');
+const C = { bg:'#0B0C0E', panel:'#141619', line:'#2E3238', text:'#ECEAE4', dim:'#8B9097', faint:'#4A4F57', acc:'#FF4A2E', paper:'#E4E0D4', ink:'#1D1D1B' };
+const F = { sans:'Sans', mono:'Mono', it:'SerifI' };
+let FILM = null, SEC = {}, FR = 0, REC = null, TN = 0;
+// time warp: film (new) time <-> drawing (old) time, from film.json
+function wold(t) { const W = FILM.warp; for (let i = 1; i < W.length; i++) if (t <= W[i][0]) return W[i - 1][1] + (t - W[i - 1][0]) * (W[i][1] - W[i - 1][1]) / Math.max(1e-6, W[i][0] - W[i - 1][0]); return W[W.length - 1][1] + t - W[W.length - 1][0]; }
+function wnew(o) { const W = FILM.warp; for (let i = 1; i < W.length; i++) if (o <= W[i][1]) return W[i - 1][0] + (o - W[i - 1][1]) * (W[i][0] - W[i - 1][0]) / Math.max(1e-6, W[i][1] - W[i - 1][1]); return W[W.length - 1][0] + o - W[W.length - 1][1]; }
+
+// ── Utilities ──
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const eo = k => 1 - Math.pow(1 - k, 3), eio = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+const lerp = (a, b, k) => a + (b - a) * k;
+function rnd(s) { return function () { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const inS = (t, k) => t >= SEC[k][0] && t < SEC[k][1];
+const S0 = k => SEC[k][0];
+
+// ── Assets ──
+const IM = {}, SEQ = {}, WAVE = {}; let GRAIN = [];
+const NFR = { van: 330, chief: 61, taylor: 166, moab: 135, father: 223 };
+function load(src) { return new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => { console.warn('missing', src); r(null); }; i.src = src; }); }
+async function boot() {
+  FILM = await (await fetch('film.json')).json(); SEC = FILM.sections; window.DUR = FILM.dur;
+  for (const c of ['chief', 'taylor', 'moab', 'father']) WAVE[c] = await (await fetch(`assets/snd/${c}.json`)).json();
+  const L = [];
+  for (const [k, s] of Object.entries({ p81: 'assets/fbi_p81.png', p292: 'assets/fbi_p292.png', p28: 'assets/fbi5_p28.png' })) L.push(load(s).then(i => IM[k] = i));
+  for (const [d, n] of Object.entries(NFR)) { SEQ[d] = []; for (let i = 1; i <= n; i++) L.push(load(`assets/${d}/${String(i).padStart(3, '0')}.jpg`).then(im => SEQ[d][i - 1] = im)); }
+  for (const f of ['700 40px Sans', '400 20px Sans', '400 20px Mono', '600 20px Mono', 'italic 24px SerifI']) L.push(document.fonts.load(f));
+  await Promise.all(L);
+  for (let g = 0; g < 6; g++) { const c = document.createElement('canvas'); c.width = c.height = 256; const gx = c.getContext('2d'); const d = gx.createImageData(256, 256); const r = rnd(g * 99 + 7);
+    for (let i = 0; i < d.data.length; i += 4) { const v = 128 + (r() + r() + r() - 1.5) * 120; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; } gx.putImageData(d, 0, 0); GRAIN.push(c); }
+  window.READY = true;
+}
+
+// ── Drawing primitives ──
+function txt(s, X, Y, o = {}) {
+  x.save(); x.font = `${o.it ? 'italic ' : ''}${o.w || 400} ${o.s || 24}px ${o.f || F.sans}`; x.fillStyle = o.c || C.text; x.globalAlpha *= (o.a ?? 1);
+  x.textAlign = o.al || 'left'; x.textBaseline = 'alphabetic'; x.letterSpacing = (o.ls || 0) + 'px';
+  if (x.globalAlpha > 0.001) x.fillText(s, X, Y);
+  const w = x.measureText(s).width; const ga = x.globalAlpha; x.restore();
+  if (REC && o.id && ga > 0.5) { const sz = o.s || 24, x0 = o.al === 'right' ? X - w : o.al === 'center' ? X - w / 2 : X;
+    REC.push({ id: o.id, text: s, x0, y0: Y - sz * .9, x1: x0 + w, y1: Y + sz * .25 }); }
+  return w;
+}
+function tw(s, o = {}) { x.save(); x.font = `${o.it ? 'italic ' : ''}${o.w || 400} ${o.s || 24}px ${o.f || F.sans}`; x.letterSpacing = (o.ls || 0) + 'px'; const w = x.measureText(s).width; x.restore(); return w; }
+function wrap(s, maxW, o) { const toks = s.split(/(?<= )/); const out = []; let line = '';
+  for (const tk of toks) { if (tw(line + tk, o) > maxW && line) { out.push(line.trimEnd()); line = tk.trimStart(); } else line += tk; } if (line) out.push(line); return out; }
+function para(s, X, Y, maxW, lh, o) { const ls = wrap(s, maxW, o); ls.forEach((l, i) => txt(l, X, Y + i * lh, { ...o, id: o.id ? o.id + i : undefined })); return ls.length; }
+function hair(x0, y0, x1, y1, c = C.line, w = 1, dash) { x.save(); x.strokeStyle = c; x.lineWidth = w; if (dash) x.setLineDash(dash); x.beginPath(); x.moveTo(x0, y0); x.lineTo(x1, y1); x.stroke(); x.restore(); }
+function rect(X, Y, w, h, c = C.line, lw = 1, dash) { x.save(); x.strokeStyle = c; x.lineWidth = lw; if (dash) x.setLineDash(dash); x.strokeRect(X + .5, Y + .5, w - 1, h - 1); x.restore(); }
+function fill(X, Y, w, h, c) { x.fillStyle = c; x.fillRect(X, Y, w, h); }
+function ring(cx, cy, r, k, label, side = 1, id) {
+  if (k <= 0) return; x.save(); x.strokeStyle = C.acc; x.lineWidth = 2.5;
+  x.beginPath(); x.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * eo(k)); x.stroke(); x.restore();
+  if (label && k > .6) { const a = seg(k, .6, .75); const lx = cx + side * (r * .72), ly = cy - r * .72, ex = lx + side * 40, ey = ly - 30;
+    x.save(); x.globalAlpha *= a; hair(lx, ly, ex, ey, C.acc, 1.5); hair(ex, ey, ex + side * 14, ey, C.acc, 1.5); x.restore();
+    txt(label, ex + side * 20, ey + 7, { s: 22, w: 700, al: side > 0 ? 'left' : 'right', a, id }); }
+}
+function plate(img, sx, sy, sw, sh, X, Y, w, h, o = {}) {
+  x.save(); x.globalAlpha *= (o.a ?? 1); fill(X, Y, w, h, '#000');
+  if (img) { x.filter = o.doc ? 'grayscale(1) contrast(1.05) brightness(0.86)' : 'grayscale(1) contrast(1.22) brightness(0.94)';
+    x.drawImage(img, sx, sy, sw, sh, X, Y, w, h); x.filter = 'none'; }
+  if (GRAIN.length) { x.beginPath(); x.rect(X, Y, w, h); x.clip(); x.globalCompositeOperation = 'overlay'; x.globalAlpha *= o.doc ? .10 : .22;
+    const g = GRAIN[FR % 6]; for (let gy = Y; gy < Y + h; gy += 256) for (let gx = X; gx < X + w; gx += 256) x.drawImage(g, gx, gy); }
+  x.restore();
+  if (!o.noborder) rect(X, Y, w, h, o.border || C.line, o.bw || 1);
+}
+// fill a panel without stretching; returns source-fraction -> screen mapping
+function cover(img, X, Y, w, h, o = {}, fx = .5, fy = .5, z = 1) {
+  if (!img) { plate(null, 0, 0, 1, 1, X, Y, w, h, o); return () => [X, Y]; }
+  const iw = img.width, ih = img.height; let sw = iw, sh = iw * h / w; if (sh > ih) { sh = ih; sw = ih * w / h; }
+  sw /= z; sh /= z; const sx = clamp((iw * fx) - sw / 2, 0, iw - sw), sy = clamp((ih * fy) - sh / 2, 0, ih - sh);
+  plate(img, sx, sy, sw, sh, X, Y, w, h, o); const k = w / sw;
+  return (u, v) => [X + (u * iw - sx) * k, Y + (v * ih - sy) * k];
+}
+function tag(s, X, Y, o = {}) { const w = txt(s, X + 14, Y, { s: o.s || 17, f: F.mono, c: o.c || C.dim, w: 600, ls: .5, a: o.a ?? 1, id: o.id });
+  x.save(); x.globalAlpha *= o.a ?? 1; fill(X, Y - 12, 6, 13, o.chip || C.acc); x.restore(); return w; }
+function flash(t, at, X, Y, w, h, d = .12) { if (t < at) return; const k = 1 - seg(t, at, at + d); if (k <= 0) return; x.save(); x.globalAlpha = k * .9; fill(X, Y, w, h, '#fff'); x.restore(); }
+function badge(X, Y, t, at) { const k = seg(t, at, at + .06); if (k <= 0) return; x.save(); x.globalAlpha *= k; x.translate(X, Y);
+  x.fillStyle = 'rgba(11,12,14,0.85)'; x.fillRect(-15, -15, 30, 30); x.strokeStyle = C.acc; x.lineWidth = 2; x.strokeRect(-15, -15, 30, 30);
+  x.beginPath(); x.moveTo(-8, 0); x.lineTo(-2, 7); x.lineTo(9, -7); x.lineWidth = 3; x.stroke(); x.restore(); }
+function wave(c, X, Y, w, h, k) { const pk = WAVE[c].pk, n = pk.length, bw = w / n;
+  for (let i = 0; i < n; i++) { const v = Math.max(.04, pk[i]) * h / 2; x.fillStyle = i / n < k ? C.text : C.faint; x.fillRect(X + i * bw, Y - v, Math.max(1, bw - 1), v * 2); }
+  if (k > 0 && k < 1) hair(X + w * k, Y - h / 2 - 6, X + w * k, Y + h / 2 + 6, C.acc, 2); }
+// a news clip frame at film time t (plays from clip start, then holds the last frame)
+function clipImg(name, t) { if (name === 'van') { const [n0] = FILM.clips_new.van; const tn = Math.min(TN, wnew(47.5) + FILM.intro); return SEQ.van[clamp(Math.floor((tn - n0) * 30), 0, NFR.van - 1)]; }
+  const [t0] = FILM.clips[name]; const n = NFR[name]; const i = clamp(Math.floor((t - t0) * 30), 0, n - 1); return SEQ[name][i]; }
+function clipK(name, t) { const [t0, d] = FILM.clips[name]; return seg(t, t0, t0 + d); }
+// lower third: red bar + name + one mono line
+function lower(name, line, X, Y, a = 1) { x.save(); x.globalAlpha *= a; fill(X, Y - 34, 6, 46, C.acc); x.restore();
+  txt(name, X + 20, Y - 6, { s: 32, w: 700, a, id: 'lt' + name }); txt(line, X + 20, Y + 22, { s: 17, f: F.mono, c: C.dim, a }); }
+// paper card for typeset transcriptions; quote in serif italic with a wiped red highlight on `hi`
+function paper(X, Y, w, h, lines, o = {}) {
+  fill(X, Y, w, h, C.paper); x.save(); x.globalCompositeOperation = 'overlay'; x.globalAlpha = .10; x.beginPath(); x.rect(X, Y, w, h); x.clip();
+  const g = GRAIN[FR % 6]; for (let gy = Y; gy < Y + h; gy += 256) for (let gx = X; gx < X + w; gx += 256) x.drawImage(g, gx, gy); x.restore();
+  let yy = Y + (o.pad || 54);
+  for (const L of lines) {
+    const s = L.s || 30, f = L.f || F.it, it = !!L.it || f === F.it, lh = L.lh || s * 1.38;
+    const ls = wrap(L.t, w - 2 * (o.padx || 48), { s, f, it, w: L.w || 400 });
+    for (const ln of ls) {
+      if (L.hi && L.hk > 0) { const ww = tw(ln, { s, f, it, w: L.w || 400 }); x.save(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = .6; fill(X + (o.padx || 48) - 4, yy - s * .9, (ww + 8) * eo(L.hk), s * 1.18, C.acc); x.restore(); }
+      txt(ln, X + (o.padx || 48), yy, { s, f, it, w: L.w || 400, c: L.c || C.ink, id: L.id ? L.id + ln.slice(0, 6) : undefined }); yy += lh; }
+    yy += L.gap || 10;
+  }
+}
+
+// ── Claim card: the number, the claim people repeat, a red strike-through at `strike` ──
+function claim(t, sec, n, s, strike, o = {}) {
+  const t0 = S0(sec); const a = seg(t, t0, t0 + .08);
+  const X = 60, Y = o.y || 150;
+  txt(String(n), X, Y + 30, { s: 124, w: 700, f: F.mono, c: C.acc, a });
+  const cx = X + 200, sz = o.s || 46;
+  const ls = wrap(s, o.w || 1500, { s: sz, w: 700 });
+  ls.forEach((l, i) => txt(l, cx, Y - 20 + i * sz * 1.25, { s: sz, w: 700, c: t >= strike ? C.dim : C.text, a, id: 'claim' + n + i }));
+  if (t >= strike) { const k = eo(seg(t, strike, strike + .35)); ls.forEach((l, i) => { const ww = tw(l, { s: sz, w: 700 }); const yy = Y - 20 + i * sz * 1.25 - sz * .32; hair(cx - 6, yy, cx - 6 + (ww + 12) * k, yy, C.acc, 4); }); }
+}
+
+// ── Map: schematic lon/lat projection of the western/southern U.S. (no borders; schematic) ──
+function proj(lon, lat, B) { const [x0, y0, w, h, lo0, lo1, la0, la1] = B; const kx = Math.cos(37 * Math.PI / 180);
+  return [x0 + (lon - lo0) / (lo1 - lo0) * w, y0 + (la1 - lat) / (la1 - la0) * h]; }
+function graticule(B, a = 1) { const [x0, y0, w, h, lo0, lo1, la0, la1] = B; x.save(); x.globalAlpha *= a * .7;
+  for (let lo = Math.ceil(lo0 / 5) * 5; lo <= lo1; lo += 5) { const [px] = proj(lo, 0, B); hair(px, y0, px, y0 + h, '#1c1f23'); }
+  for (let la = Math.ceil(la0 / 5) * 5; la <= la1; la += 5) { const [, py] = proj(0, la, B); hair(x0, py, x0 + w, py, '#1c1f23'); }
+  x.restore(); rect(x0, y0, w, h, C.line); }
+function pin(px, py, label, o = {}) { const a = o.a ?? 1; x.save(); x.globalAlpha *= a;
+  if (o.ghost) { x.setLineDash([5, 5]); x.strokeStyle = C.faint; x.lineWidth = 2; x.beginPath(); x.arc(px, py, 11, 0, 7); x.stroke(); }
+  else { x.fillStyle = o.c || C.acc; x.beginPath(); x.arc(px, py, 8, 0, 7); x.fill(); }
+  x.restore(); if (label) txt(label, px + (o.al === 'right' ? -20 : 20), py + 8, { s: o.s || 24, w: 700, c: o.ghost ? C.dim : C.text, a, al: o.al || 'left', id: 'pin' + label });
+  if (o.sub) txt(o.sub, px + (o.al === 'right' ? -20 : 20), py + 34, { s: 16, f: F.mono, c: C.dim, a, al: o.al || 'left' }); }
+
+// ── Subtitles: one line, bottom ──
+function subs(t) { for (const [a, b, s] of FILM.subs) if (t >= a && t < b) {
+  x.save(); x.font = `700 31px ${F.sans}`; x.textAlign = 'center'; x.shadowColor = 'rgba(0,0,0,.9)'; x.shadowBlur = 10; x.fillStyle = C.text;
+  x.fillText(s, W / 2, 1012); x.restore(); } }
+window.SUBCHECK = () => FILM.subs.map(([a, b, s], i) => { const w = tw(s, { s: 31, w: 700 }); return { i, w, ok: w <= 1600, s }; });
+
+// ═══════════ Scenes ═══════════
+const D = (lon, lat) => [lon, lat];
+const PL = { yos: D(-119.59, 37.75), spread: D(-110.57, 43.77), gnv: D(-82.33, 29.65), np: D(-82.24, 27.04), moab: D(-109.55, 38.57) };
+
+function sCold(t) {
+  // phone bubble types on
+  const X = 150, Y = 330; const k = seg(t, .4, 1.5); const s = 'No service in Yosemite';
+  if (t >= .25) { tag('Text from Gabby’s phone · Aug. 30, 2021', X, Y - 30, { a: seg(t, .25, .35) });
+    x.save(); x.fillStyle = '#2A2D32'; x.beginPath(); x.roundRect(X, Y, 640, 110, 30); x.fill(); x.restore();
+    const n = Math.floor(s.length * k); txt(s.slice(0, n), X + 38, Y + 70, { s: 44, w: 400 });
+    if (k >= 1) txt(s, X + 38, Y + 70, { s: 44, w: 400, a: 0, id: 'bubble' });
+    if (k < 1 && Math.floor(t * 4) % 2 === 0) fill(X + 38 + tw(s.slice(0, n), { s: 44 }), Y + 36, 3, 44, C.text); }
+  // map: where the phone said vs. where she was
+  if (t >= 2.2) { const B = [900, 120, 900, 700, -124, -100, 33, 47]; flash(t, 2.2, 900, 120, 900, 700);
+    graticule(B); tag('Schematic · straight-line distance', 900, 104, {});
+    const [ax, ay] = proj(...PL.yos, B), [bx, by] = proj(...PL.spread, B);
+    pin(ax, ay, 'Yosemite, Calif.', { ghost: true, sub: 'what the text said' });
+    pin(bx, by, 'Spread Creek, Wyo.', { a: seg(t, 3.0, 3.1), sub: 'where she was', al: 'right' });
+    if (t > 3.6) { const k2 = eo(seg(t, 3.6, 4.4)); hair(ax, ay, lerp(ax, bx, k2), lerp(ay, by, k2), C.acc, 2, [8, 6]);
+      if (k2 >= 1) txt('≈ 630 mi', (ax + bx) / 2 + 20, (ay + by) / 2 + 40, { s: 34, w: 700, f: F.mono, id: 'dist' }); }
+  }
+}
+
+function sTitle(t) { const t0 = S0('title');
+  txt('The file', 60, 300, { s: 104, w: 700, a: seg(t, t0, t0 + .06), id: 'title' });
+  txt('FBI Vault \u00b7 case 70A-DN-3494764', 64, 372, { s: 30, f: F.mono, c: C.dim, a: seg(t, t0 + .3, t0 + .4), id: 'sub' });
+  const parts = [['Part 01', '366 pp'], ['Part 02', '201 pp'], ['Part 03', '245 pp'], ['Part 04', '52 pp'], ['Part 05', '166 pp'], ['Part 06', 'final']];
+  parts.forEach(([p, n], i) => { const at = t0 + 3.4 + i * .22; if (t < at) return; const Y = 170 + i * 92;
+    fill(1180, Y, 680, 70, C.panel); rect(1180, Y, 680, 70); flash(t, at, 1180, Y, 680, 70);
+    txt('FBI Vault · Brian Laundrie · ' + p, 1206, Y + 45, { s: 22, f: F.mono, w: 600 }); txt(n, 1834, Y + 45, { s: 22, f: F.mono, c: C.dim, al: 'right' }); });
+  if (t >= t0 + 3.4) txt('1,000+ pages', 60, 640, { s: 120, w: 700, f: F.mono, c: C.acc, a: seg(t, t0 + 3.4, t0 + 3.5), id: 'pages' });
+  if (t >= t0 + 4.4) txt('10 things the record says', 66, 720, { s: 36, w: 700, a: seg(t, t0 + 4.4, t0 + 4.5), id: 'ten' });
+}
+
+function s10(t) { const t0 = S0('s10');
+  claim(t, 's10', 10, '“He was charged with her murder.”', 18.2);
+  if (t >= 18.6 && t < 24.3) { flash(t, 18.6, 60, 330, 760, 360);
+    paper(60, 330, 760, 360, [{ t: 'United States v. Brian Christopher Laundrie', f: F.sans, w: 700, s: 26, it: false },
+      { t: 'D. Wyoming · warrant issued Sept. 22, 2021', f: F.mono, s: 19, it: false, c: '#555' },
+      { t: 'One count: 18 U.S.C. § 1029(a)(2), unauthorized use of an access device (her debit card), $1,000 or more.', s: 30, hi: 1, hk: seg(t, 19.0, 19.8), gap: 20 },
+      { t: 'Transcription, summary of the charge', f: F.mono, s: 16, it: false, c: '#666' }]);
+    tag('Court record', 60, 316); }
+  if (t >= 21.2) { const B = [880, 300, 980, 560, -116, -78, 25, 47]; const a = 1;
+    if (t < 24.3) { graticule(B); tag('Schematic · the drive home, Aug. 30–Sept. 1', 880, 284);
+      const [ax, ay] = proj(...PL.spread, B), [bx, by] = proj(...PL.gnv, B), [cx, cy] = proj(...PL.np, B);
+      pin(ax, ay, 'Wyoming', { sub: 'Aug. 30' }); const k = eo(seg(t, 21.3, 22.0));
+      hair(ax, ay, lerp(ax, bx, k), lerp(ay, by, k), C.acc, 2, [8, 6]);
+      if (k >= 1) { pin(bx, by, 'Gainesville', { sub: 'Sept. 1', al: 'right' }); pin(cx, cy, 'North Port', { c: C.text, al: 'right' }); } } }
+  if (t >= 24.3) { flash(t, 24.3, 60, 300, 1800, 600);
+    const z = lerp(1.0, 1.15, eio(seg(t, 24.3, 29.5)));
+    const m = cover(IM.p81, 60, 300, 1100, 600, { doc: 1 }, .5, .42, z);
+    tag('FBI FD-302 · Vault part 01, p. 81', 60, 284);
+    // highlight the card amount and the pump time lines
+    const hl = (u0, v, u1, at) => { const [a0, b0] = m(u0, v - .009), [a1, b1] = m(u1, v + .009); const k = eo(seg(t, at, at + .5));
+      x.save(); x.beginPath(); x.rect(60, 300, 1100, 600); x.clip(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = .6; fill(a0, b0, (a1 - a0) * k, b1 - b0, C.acc); x.restore(); };
+    hl(.08, .3793, .91, 24.8); hl(.08, .4537, .91, 25.6);
+    txt('03:00:17', 1220, 470, { s: 96, w: 600, f: F.mono, a: seg(t, 25.6, 25.7), id: 'clock' });
+    txt('Sept. 1, 2021 · Gainesville, Fla.', 1224, 520, { s: 22, f: F.mono, c: C.dim, a: seg(t, 25.6, 25.7) });
+    txt('$14.10', 1220, 680, { s: 110, w: 700, f: F.mono, c: C.acc, a: seg(t, 27.4, 27.5), id: 'amt' });
+    txt('on her card, plus $10.00 in cash', 1224, 730, { s: 22, f: F.mono, c: C.dim, a: seg(t, 27.4, 27.5) }); }
+}
+
+function s9(t) { const t0 = S0('s9');
+  claim(t, 's9', 9, '“She was texting her family.”', 34.8);
+  // date axis
+  const ax0 = 120, ax1 = 1800, AY = 760; const dx = d => lerp(ax0, ax1, (d - 25) / 7);
+  if (t >= 32.4) { hair(ax0, AY, ax1, AY, C.faint, 2); for (let d = 25; d <= 32; d++) { const px = dx(d); hair(px, AY - 8, px, AY + 8, C.faint); txt(d <= 31 ? 'Aug. ' + d : 'Sept. 1', px, AY + 36, { s: 16, f: F.mono, c: C.dim, al: 'center' }); } }
+  const card = (d, s, at, hi) => { if (t < at) return; const px = dx(d), w = 640, X = clamp(px - w / 2, 60, 1860 - w), Y = 420; flash(t, at, X, Y, w, 150);
+    x.save(); x.fillStyle = '#2A2D32'; x.beginPath(); x.roundRect(X, Y, w, 150, 26); x.fill(); x.restore();
+    para(s, X + 30, Y + 58, w - 60, 40, { s: 30, id: 'tx' + d });
+    hair(px, Y + 150, px, AY, C.acc, 1.5, [5, 5]); x.save(); x.fillStyle = C.acc; x.beginPath(); x.arc(px, AY, 7, 0, 7); x.fill(); x.restore();
+    if (hi) { const k = eo(seg(t, hi, hi + .4)); const ww = tw('Stan,', { s: 30 }), sx = X + 30 + tw('Can you help ', { s: 30 }); hair(sx, Y + 66, sx + ww * k, Y + 66, C.acc, 3); } };
+  card(27, 'Can you help Stan, I just keep getting his voicemails and missed calls', 32.6, 34.8);
+  card(30, 'No service in Yosemite', 34.0);
+  if (t >= 37.0) { flash(t, 37.0, 1060, 160, 800, 200);
+    paper(1060, 150, 800, 210, [{ t: '“…indicative of Mr. Laundrie attempting to deceive law enforcement”', s: 32, hi: 1, hk: seg(t, 37.3, 38.2) }], { pad: 70 });
+    tag('FBI final update · Jan. 21, 2022', 1060, 136); }
+}
+
+function s8(t) { const t0 = S0('s8');
+  claim(t, 's8', 8, '“A YouTube couple found her.”', 46.3, { s: 40 });
+  const X = 60, Y = 270, w = 1000, h = 620; const ct = t; const fr = clipImg('van', ct);
+  if (t >= 43.4) { flash(t, 43.4, X, Y, w, h); const m = cover(fr, X, Y, w, h, {}, .38, .7, 1.3); tag('Video · Red, White & Bethune · Aug. 27, 2021', X, Y - 16);
+    if (t >= 47.5) { flash(t, 47.5, X, Y, w, h, .1); const [cx, cy] = m(.27, .78); ring(cx, cy, 110, seg(t, 47.6, 48.1), 'the van', 1, 'van'); } }
+  if (t >= 46.2) { flash(t, 46.2, 1110, 300, 750, 250);
+    paper(1110, 300, 750, 250, [{ t: 'The FBI asked the public for photos and video from the Spread Creek area, Aug. 27–30.', s: 30, it: false, f: F.sans, hi: 1, hk: seg(t, 47.4, 48.2) }]);
+    tag('FBI Denver appeal · Sept. 2021 (summary)', 1110, 286); }
+  if (t >= 50.9) { flash(t, 50.9, 1110, 600, 750, 260);
+    paper(1110, 600, 750, 260, [{ t: '“corroborate the information that we already had from the phone companies”', s: 32, hi: 1, hk: seg(t, 51.2, 52.0) }]);
+    tag('FBI agent, interviewed 2025', 1110, 586); }
+}
+
+function s7(t) { const t0 = S0('s7');
+  claim(t, 's7', 7, '“No one noticed anything out there.”', 57.9);
+  if (t >= 55.4) { flash(t, 55.4, 60, 330, 980, 470);
+    paper(60, 330, 980, 470, [{ t: 'FD-302 · interview of a camping couple (excerpt)', f: F.mono, s: 18, it: false, c: '#555', gap: 22 },
+      { t: 'They arrived at the Spread Creek area on Sept. 5, 2021, found a hammock and a table that “looked abandoned,” and took them.', s: 34, gap: 24 },
+      { t: 'Transcription, paraphrased except the quoted words. FBI Vault part 01, p. 59.', f: F.mono, s: 16, it: false, c: '#666' }]);
+    tag('FBI interview report', 60, 316); }
+  if (t >= 57.0) { txt('Sept. 5', 1140, 470, { s: 64, w: 600, f: F.mono, a: seg(t, 57.0, 57.1), id: 'd5' });
+    txt('campers at the site', 1144, 510, { s: 22, f: F.mono, c: C.dim, a: seg(t, 57.0, 57.1) }); }
+  if (t >= 58.6) { txt('Sept. 19', 1140, 650, { s: 64, w: 600, f: F.mono, a: seg(t, 58.6, 58.7), id: 'd19' });
+    txt('she is found', 1144, 690, { s: 22, f: F.mono, c: C.dim, a: seg(t, 58.6, 58.7) });
+    txt('14 days', 1540, 580, { s: 72, w: 700, f: F.mono, c: C.acc, a: seg(t, 59.4, 59.5), id: 'd14' }); }
+}
+
+function s6(t) { const t0 = S0('s6');
+  claim(t, 's6', 6, '“Her things were in the van.”', 66.3);
+  if (t >= 65.0 && t < 69.5) { flash(t, 65.0, 60, 340, 860, 300);
+    paper(60, 340, 860, 300, [{ t: 'Van search, Sept. 14, 2021', f: F.mono, s: 20, it: false, c: '#555', gap: 18 }, { t: 'Her belongings: missing.', s: 44, hi: 1, hk: seg(t, 66.3, 66.9) }]);
+    tag('FBI file (summary)', 60, 326);
+    txt('Sept. 20, 2021', 1000, 470, { s: 64, w: 600, f: F.mono, a: seg(t, 67.0, 67.1), id: 's20' });
+    txt('search of his parents’ house, North Port', 1004, 510, { s: 22, f: F.mono, c: C.dim, a: seg(t, 67.0, 67.1) }); }
+  if (t >= 69.5) { flash(t, 69.5, 60, 290, 1800, 610);
+    // signature shot: push from the full receipt into line 30
+    const k = eio(seg(t, 69.6, 72.6)); const z = lerp(1.0, 1.6, k);
+    const m = cover(IM.p292, 60, 290, 1800, 610, { doc: 1 }, lerp(.5, .38, k), lerp(.32, .415, k), z);
+    tag('FBI FD-597, receipt for property · Vault part 01, p. 292', 60, 274);
+    const [a0, b0] = m(.075, .405), [a1, b1] = m(.69, .425); const hk = eo(seg(t, 72.2, 72.9));
+    x.save(); x.beginPath(); x.rect(60, 290, 1800, 610); x.clip(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = .6; fill(a0, b0, (a1 - a0) * hk, b1 - b0, C.acc); x.restore();
+    if (t >= 72.9) txt('30 - USPS Box labeled “Gabby Misc”', 0, 0, { a: 0, id: 'misc' }); }
+}
+
+function s5(t) { const t0 = S0('s5');
+  claim(t, 's5', 5, '“Police watched Brian come home.”', 85.9, { s: 42 });
+  const X = 60, Y = 270, w = 1100, h = 620;
+  if (t >= 77.8 && t < 80.1) { flash(t, 77.8, X, Y, w, h); cover(clipImg('chief', t), X, Y, w, h); tag('News conference · Sept. 16, 2021 · FOX 13', X, Y - 16);
+    lower('Todd Garrison', 'North Port police chief', X + 30, Y + h - 50); }
+  if (t >= 80.1) { flash(t, 80.1, X, Y, w, h); cover(clipImg('taylor', t), X, Y, w, h); tag('Briefing · North Port police · FOX 13', X, Y - 16);
+    if (t < 82.6) lower('Josh Taylor', 'North Port police spokesman', X + 30, Y + h - 50); }
+  if (t >= 77.8) { const c = t < 80.1 ? 'chief' : 'taylor'; wave(c, 1210, 400, 650, 90, clipK(c, t)); tag('Original sound', 1210, 330); }
+  if (t >= 85.9) { flash(t, 85.9, 1210, 520, 650, 300);
+    paper(1210, 520, 650, 300, [{ t: 'Sept. 15, 2021', f: F.mono, s: 20, it: false, c: '#555', gap: 16 }, { t: 'The person seen bringing his Mustang home was his mother, Roberta, in a baseball cap.', s: 32, it: false, f: F.sans, hi: 1, hk: seg(t, 86.2, 87.0) }]);
+    tag('North Port police, Oct. 2021 (summary)', 1210, 506); }
+}
+
+function s4(t) { const t0 = S0('s4');
+  claim(t, 's4', 4, '“His parents didn’t know anything was wrong.”', 97.4, { s: 40 });
+  if (t >= 89.2) txt('Neither parent was charged with a crime.', 260, 238, { s: 22, f: F.mono, c: C.dim, a: seg(t, 89.2, 89.3), id: 'nc' });
+  if (t >= 94.2) { flash(t, 94.2, 60, 300, 900, 380);
+    paper(60, 300, 900, 380, [{ t: 'Q. And what did he say to you?', f: F.mono, s: 22, it: false, c: '#555', gap: 8 },
+      { t: '“…he was not calm and he got very excited and told me things had -- you know, ‘Gabby’s gone’…”', s: 32, hi: 1, hk: seg(t, 94.6, 95.6), gap: 22 },
+      { t: 'Q. Did you understand that to mean that something had happened to Gabby?', f: F.mono, s: 22, it: false, c: '#555', gap: 8 },
+      { t: '“I understood it that something was wrong.”', s: 32, hi: 1, hk: seg(t, 96.8, 97.6) }]);
+    tag('Deposition · Christopher Laundrie · Oct. 10, 2023 · pp. 69, 71', 60, 286); }
+  if (t >= 103.6) { flash(t, 103.6, 1000, 300, 860, 380);
+    paper(1000, 300, 860, 380, [{ t: 'Q. …did it go through your mind that your son may have murdered Gabby?', f: F.mono, s: 22, it: false, c: '#555', gap: 14 },
+      { t: '“…it’s hard to think back to a time with new information what you thought at the time, but it probably -- it probably went through my mind.”', s: 32, hi: 1, hk: seg(t, 104.4, 105.6) }]);
+    tag('Deposition · Roberta Laundrie · Oct. 11, 2023 · p. 59', 1000, 286); }
+}
+
+function s3(t) { const t0 = S0('s3');
+  claim(t, 's3', 3, '“The internet solved it.”', 112.2);
+  if (t >= 110.6) { // dot field: tips, theories, videos (illustrative)
+    const r = rnd(5), N = 1400; const k = seg(t, 110.6, 113.0); x.save();
+    for (let i = 0; i < N * k; i++) { const px = 80 + r() * 900, py = 320 + r() * 560; x.fillStyle = i % 97 === 0 ? C.acc : C.faint; x.fillRect(px, py, 4, 4); } x.restore();
+    tag('Illustration · online theories, schematic', 80, 306); }
+  if (t >= 114.5) { flash(t, 114.5, 1040, 320, 820, 300);
+    const m = cover(IM.p28, 1040, 320, 820, 300, { doc: 1 }, .5, .845, lerp(1.25, 1.35, seg(t, 114.5, 122.5)));
+    const hl = (v, u1, at) => { const [a0, b0] = m(.1, v - .009), [a1, b1] = m(u1, v + .009); const k = eo(seg(t, at, at + .6));
+      x.save(); x.beginPath(); x.rect(1040, 320, 820, 300); x.clip(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = .6; fill(a0, b0, (a1 - a0) * k, b1 - b0, C.acc); x.restore(); };
+    hl(.8195, .85, 115.0); hl(.8425, .84, 115.6);
+    txt('more of opinion and commentary versus useful information', 0, 0, { a: 0, id: 'fbiq' });
+    tag('FBI Tampa review of a tipped YouTube channel · Sept. 24, 2021 · Vault pt. 05, p. 28', 1040, 306, { s: 15 }); }
+}
+
+function s2(t) { const t0 = S0('s2');
+  claim(t, 's2', 2, '“Moab police handled it right.”', 135.3);
+  const X = 60, Y = 270, w = 1100, h = 620;
+  if (t >= 126.5) { flash(t, 126.5, X, Y, w, h); const m = cover(clipImg('moab', t), X, Y, w, h); tag('Bodycam · Moab police · Aug. 12, 2021', X, Y - 16);
+    if (t >= 129.6) { const [cx, cy] = m(.83, .035); ring(cx, cy + 20, 70, seg(t, 129.6, 130.1), '16:48, Aug. 12', -1, 'stamp'); }
+    if (t < 131.2) { wave('moab', 1210, 400, 650, 90, clipK('moab', t)); tag('Original sound', 1210, 330); } }
+  if (t >= 131.4) { flash(t, 131.4, 1210, 300, 650, 230);
+    paper(1210, 300, 650, 230, [{ t: '“the gentleman was slapping the girl”', s: 36, hi: 1, hk: seg(t, 131.8, 132.8) }], { pad: 80 });
+    tag('911 call · Aug. 12, 2021 (transcription)', 1210, 286); }
+  if (t >= 137.8) { flash(t, 137.8, 1210, 580, 650, 290);
+    paper(1210, 580, 650, 290, [{ t: '“It’s very likely Gabby was a long-term victim of domestic violence”', s: 34, hi: 1, hk: seg(t, 138.6, 139.6) }], { pad: 76 });
+    tag('Independent review · Capt. Brandon Ratcliffe · Jan. 2022', 1210, 566); }
+}
+
+function s1(t) { const t0 = S0('s1');
+  if (t < 157.4) {
+    claim(t, 's1', 1, '“Nothing changed.”', 145.2);
+    // changed / still open
+    const col = (X, title, items, at, dashed) => { if (t < at) return; txt(title, X, 330, { s: 30, w: 700, a: seg(t, at, at + .1), id: 'col' + title });
+      items.forEach((s, i) => { const a2 = at + .3 + i * .4; if (t < a2) return; const Y = 370 + i * 150; flash(t, a2, X, Y, 820, 128);
+        fill(X, Y, 820, 128, C.panel); rect(X, Y, 820, 128, dashed ? C.faint : C.line, 1, dashed ? [6, 6] : null);
+        para(s, X + 70, Y + 52, 720, 34, { s: 26, id: 'it' + X + i }); if (!dashed) badge(X + 34, Y + 44, t, a2 + .1); }); };
+    col(60, 'Changed', ['Utah S.B. 117 (2023): a lethality assessment at every domestic violence call.', 'The Gabby Petito Foundation, founded by her family in 2021.'], 145.6, false);
+    col(1040, 'Still open', ['Her family’s suit against Moab: dismissed on immunity, now on appeal at the Utah Supreme Court.'], 146.6, true);
+    if (t >= 149.0) { // 710 dots: Indigenous people reported missing in Wyoming, 2011-2020
+      const k = seg(t, 149.0, 151.5); const n = Math.floor(710 * k); x.save(); x.fillStyle = C.text;
+      for (let i = 0; i < n; i++) { const cx = 1040 + (i % 71) * 11.5, cy = 560 + Math.floor(i / 71) * 11.5; x.fillRect(cx, cy, 6, 6); } x.restore();
+      if (k >= 1) { txt('710', 1040, 720, { s: 72, w: 700, f: F.mono, c: C.acc, id: 'n710' });
+        txt('Indigenous people reported missing, Wyoming, 2011–2020', 1200, 708, { s: 20, f: F.mono, c: C.dim }); tag('Wyoming MMIP report, Jan. 2021', 1040, 545); } }
+  } else { const X = 60, Y = 120, w = 1340, h = 760;
+    flash(t, 157.4, X, Y, w, h); cover(clipImg('father', t), X, Y, w, h); tag('News conference · Sept. 27, 2021 · CBS New York', X, Y - 16);
+    lower('Joseph Petito', 'Gabby’s father', X + 30, Y + h - 50); wave('father', 1450, 500, 410, 90, clipK('father', t)); tag('Original sound', 1450, 430); }
+}
+
+function sEnd(t) { const t0 = S0('end');
+  const a = seg(t, t0, t0 + .1);
+  txt('Gabby Petito Foundation', 60, 260, { s: 64, w: 700, a, id: 'gpf' });
+  txt('gabbypetitofoundation.org', 64, 312, { s: 26, f: F.mono, c: C.dim, a });
+  txt('National Domestic Violence Hotline', 60, 430, { s: 40, w: 700, a: seg(t, t0 + .4, t0 + .5), id: 'ndvh' });
+  txt('1-800-799-7233  ·  text START to 88788', 64, 476, { s: 26, f: F.mono, c: C.acc, a: seg(t, t0 + .4, t0 + .5), id: 'ndvh2' });
+  hair(60, 560, 1860, 560, C.line);
+  const L = ['Records: FBI Vault, Brian Laundrie parts 01–06; FBI Denver final update, Jan. 21, 2022; depositions in Petito v. Laundrie (Sarasota County);',
+    'Moab independent review (Ratcliffe, 2022); Utah S.B. 117 (2023); Wyoming MMIP report (2021).',
+    'Footage, used for commentary: Red, White & Bethune via WFLA; FOX 13 Tampa Bay; Moab police bodycam via The Times-Independent; CBS New York.',
+    'Maps are schematic. Every claim and its source: FACTS.md.'];
+  L.forEach((s, i) => txt(s, 60, 620 + i * 40, { s: 19, f: F.mono, c: C.dim, a: seg(t, t0 + .8, t0 + .9) }));
+}
+
+// ═══════════ The opening: animated open, setup over the route map, tease ═══════════
+const ROUTE = [['Blue Point, N.Y.', -73.03, 40.74, 'July 2'], ['Moab, Utah', -109.55, 38.57, 'Aug. 12'], ['Spread Creek, Wyo.', -110.57, 43.77, 'Aug. 27'], ['North Port, Fla.', -82.24, 27.04, 'Sept. 1']];
+function sIntro(t) { const E = FILM.intro_ev, I1 = FILM.vo.i1[0];
+  // 1. open: three record pages cut in, a red ring, then the title
+  if (t < I1) {
+    const P = [[IM.p292, .4, .415, 0.15], [IM.p81, .5, .38, 0.55], [IM.p28, .5, .82, 0.95]];
+    if (t < 2.3) P.forEach(([im, fx, fy, at], i) => { if (t < at) return; const X = 60 + i * 610, Y = 200, w = 580, h = 560;
+      flash(t, at, X, Y, w, h); cover(im, X, Y, w, h, { doc: 1 }, fx, fy, 2.2 + .15 * seg(t, at, 2.3)); });
+    if (t >= 1.5 && t < 2.3) ring(60 + 290, 480, 120, seg(t, 1.5, 2.0));
+    if (t >= 2.3) { flash(t, 2.3, 0, 0, W, 940, .14);
+      txt('What the record says', 60, 470, { s: 120, w: 700, id: 'opent' });
+      const k = eo(seg(t, 2.5, 3.1)); hair(64, 510, 64 + 900 * k, 510, C.acc, 4);
+      txt('Gabby Petito, 2021', 64, 570, { s: 40, c: C.dim, a: seg(t, 2.4, 2.5), id: 'opens' }); }
+    return; }
+  // 2. setup: the trip on a schematic map; the drive home in red at "home"
+  if (t < FILM.vo.i2[0]) { const B = [60, 110, 1800, 760, -126, -68, 24, 47.5]; flash(t, I1, 60, 110, 1800, 760);
+    graticule(B); tag('Schematic \u00b7 the trip, July\u2013September 2021', 60, 94);
+    const P = ROUTE.map(([n, lo, la, d]) => [n, ...proj(lo, la, B), d]);
+    const out = [P[0], P[1], P[2]], kOut = eo(seg(t, I1 + .5, E.home - 1.2));
+    const segN = (a, b, k, c, dash) => hair(a[1], a[2], lerp(a[1], b[1], k), lerp(a[2], b[2], k), c, 2.5, dash);
+    const n = kOut * 2; for (let i = 0; i < 2; i++) { const k = clamp(n - i); if (k > 0) segN(out[i], out[i + 1], k, C.text, [10, 6]); }
+    pin(P[0][1], P[0][2], P[0][0], { c: C.text, sub: P[0][3], al: 'right' });
+    if (n > 1) pin(P[1][1], P[1][2], P[1][0], { c: C.text, sub: P[1][3], al: 'right', a: seg(n, 1, 1.1) });
+    if (n >= 2) pin(P[2][1], P[2][2], P[2][0], { c: C.text, sub: P[2][3], al: 'right', a: seg(n, 2 - .01, 2) });
+    if (t >= E.home) { const k = eo(seg(t, E.home, E.home + 1.4)); segN(P[2], P[3], k, C.acc, [10, 6]);
+      if (k >= 1) pin(P[3][1], P[3][2], P[3][0], { sub: P[3][3] + ' \u00b7 he comes home alone', al: 'right' }); }
+    if (t >= E.home + 1.1) txt('Sept. 11, 2021: reported missing', 1240, 200, { s: 24, f: F.mono, c: C.dim, a: seg(t, E.home + 1.1, E.home + 1.2), id: 'rm' });
+    return; }
+  // 3. tease: the file, then three things inside it
+  const X = 60, Y = 160, w = 1800, h = 700;
+  if (t < E.box) { txt('1,000+ pages', 60, 520, { s: 140, w: 700, f: F.mono, c: C.acc, id: 'tp' }); txt('nobody read', 64, 590, { s: 40, c: C.dim, id: 'tn' }); return; }
+  if (t < E.father) { flash(t, E.box, X, Y, w, h); const m = cover(IM.p292, X, Y, w, h, { doc: 1 }, .38, .415, 1.6);
+    const [a0, b0] = m(.075, .405), [a1, b1] = m(.69, .425); const hk = eo(seg(t, E.box + .3, E.box + .9));
+    x.save(); x.beginPath(); x.rect(X, Y, w, h); x.clip(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = .6; fill(a0, b0, (a1 - a0) * hk, b1 - b0, C.acc); x.restore(); return; }
+  if (t < E.fbi) { flash(t, E.father, X, Y, w, h);
+    paper(260, 260, 1400, 380, [{ t: '\u201c\u2026and told me things had -- you know, \u2018Gabby\u2019s gone\u2019\u2026\u201d', s: 54, hi: 1, hk: seg(t, E.father + .3, E.father + 1.1) }], { pad: 150, padx: 90 });
+    tag('Deposition \u00b7 Christopher Laundrie \u00b7 2023', 260, 246); return; }
+  flash(t, E.fbi, X, Y, w, h); const m = cover(IM.p28, X, Y, w, h, { doc: 1 }, .5, .83, 1.5);
+  const hl = (v, u1, at) => { const [a0, b0] = m(.1, v - .009), [a1, b1] = m(u1, v + .009); const k = eo(seg(t, at, at + .6));
+    x.save(); x.beginPath(); x.rect(X, Y, w, h); x.clip(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = .6; fill(a0, b0, (a1 - a0) * k, b1 - b0, C.acc); x.restore(); };
+  hl(.8195, .85, E.fbi + .3); hl(.8425, .84, E.fbi + .7);
+}
+
+// ═══════════ render ═══════════
+window.render = function (tn) {
+  TN = tn; FR = Math.floor(tn * 30); x.save(); fill(0, 0, W, H, C.bg);
+  if (tn < FILM.intro) { sIntro(tn); subs(tn); x.restore(); return; }
+  const t = wold(tn - FILM.intro);
+  const S = [['cold', sCold], ['title', sTitle], ['s10', s10], ['s9', s9], ['s8', s8], ['s7', s7], ['s6', s6], ['s5', s5], ['s4', s4], ['s3', s3], ['s2', s2], ['s1', s1], ['end', sEnd]];
+  for (const [k, f] of S) if (inS(t, k)) { f(t); if (t - S0(k) < .12 && k !== 'cold') flash(t, S0(k), 0, 0, W, 940, .12); }
+  subs(tn); x.restore();
+};
+window.TEXTS = function (t) { REC = []; window.render(t); const r = REC; REC = null; return r; };
+boot();
+</script></body></html>

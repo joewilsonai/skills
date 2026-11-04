@@ -1,0 +1,45 @@
+{
+ "tempo": 1.12,
+ "reader_tempo": 1.0,
+ "block_gap": 0.6,
+ "extra": {
+  "ten.": 0.5,
+  "card.": 0.3,
+  "didn't.": 0.4
+ },
+ "segments": [
+  [
+   "ten",
+   "Number ten."
+  ],
+  [
+   "brian",
+   "Brian Laundrie was never charged with Gabby's death."
+  ],
+  [
+   "the only",
+   "The only federal charge he ever faced\u2026 was using her debit card."
+  ],
+  [
+   "and the",
+   "And the FBI's file follows that card, all the way home."
+  ],
+  [
+   "august",
+   "August thirtieth. Riverton, Wyoming. A gas pump."
+  ],
+  [
+   "laundrie then",
+   "Laundrie then gets back inside the van and leaves the area. Petito is not observed in the surveillance video to be inside the van.",
+   "R"
+  ],
+  [
+   "september",
+   "September first. Gainesville, Florida. Three a.m. Fourteen dollars and ten cents, on her card."
+  ],
+  [
+   "her card made",
+   "Her card made it home to Florida. She didn't."
+  ]
+ ]
+}

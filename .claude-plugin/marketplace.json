@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "joewilson-skills",
+  "description": "Skills Joe Wilson and his agent built doing real work, published as they're used and updated as they improve.",
+  "owner": { "name": "Joe Wilson", "url": "https://joewilson.ai" },
+  "plugins": [
+    {
+      "name": "we-read-them",
+      "description": "True-crime reels and films built from the primary record of a real case.",
+      "source": "./plugins/we-read-them",
+      "version": "1.0.0",
+      "category": "content",
+      "tags": ["true-crime", "video", "reels", "documentary"]
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+---
+name: we-read-them
+description: Use when Joe wants a true-crime explainer — the "We Read Them" series (vertical reels for Shorts/Reels/TikTok, a Dateline-style full film, or a top-10 countdown) built from the primary record of a real case. Triggers: "true crime video", "We Read Them", "do another case", "top 10 things you didn't know about <case>", "find footage for", "make reels of", "what the record says". Covers case pick, research agents, FACTS gate, finding and cutting real news footage and FBI/court documents, pronunciation, one-take ElevenLabs narration, picture in lemo-opuscar, mix, render, and delivery.
+---
+
+# We Read Them
+
+Series (Joe named it 11/3/2026): **WE READ THEM.** We read the public record of a famous case so viewers don't have to, and show what it says against what everyone thinks they know. First case: Gabby Petito — full film "What the record says" (3:44) + intro + reels 10→1, built with this skill.
+
+**Before anything, read the reference you need:**
+- `references/research-and-footage.md` — picking the case, the three research agents, FACTS.md, getting FBI Vault / deposition PDFs, downloading and cutting news clips, privacy rules.
+- `references/pronunciation.md` — what needs a dictionary rule before voicing.
+- `references/voice-mix-render.md` — voices, one-take tool, mix, lemo-opuscar render/master, sending.
+- `references/example-FACTS-petito.md` — what a finished FACTS gate looks like.
+
+## Layout of a case
+```
+work/<bucket>/<case>/
+  research/ primary-facts.md sleuths.md rights.md deep-dive.md
+  CANDIDATE-10.md   pron-dict.json   pron-rules.json
+  film/  FACTS.md TREATMENT.md index.html tools/ audio/ raw/ assets/
+  reels/ r0 (intro) r10 … r1, tools -> skill scripts, final/
+```
+Reel dir: `index.html` (picture), `mix.py`, `one/script.txt`, `one/config.json`, `assets/`, `fonts/`, output `reel-NN.mp4` + `-phone.mp4`. Start from `templates/` (`reel-page.html` = document-led, `reel-page-footage.html` = clip-led, `intro-page.html` + `intro-mix.py` = series intro with the page wall and stat screens).
+
+## The loop (one reel at a time)
+1. **Research once per case** (references/research-and-footage.md). FACTS.md is the gate: nothing airs without a row.
+2. **Script.** Hook in 2 s → "Number N." as its own beat → the record → our take → closing line. Have an opinion grounded in what's on screen (Joe: "we shouldn't be so pc pilled"); name the innocent explanation, then why it still looks bad; never assert an uncharged crime. **Make every line visual**: find the real thing for each line (stat slams, timestamps, map, document line, quote card, clip, contradiction). Stats: one per full screen, big number + plain label + source tag, spoken, and **held** long enough to read.
+3. **Pronunciation pass** → add rules → bump dictionary version.
+4. **Voice** with `scripts/onetake.py <reel>`: one continuous Smith take on eleven_v3 with tags I place, Harper reads record text (`R:` lines, labelled "read from the record" on screen), holds by stretching natural gaps. Never stitch sentence takes ("choppy"), never force dramatic splits ("trying too hard"), keep it fast (tempo 1.12).
+5. **Audio to Joe** as mp3 download → OK. (Skip once Joe says to run the rest autonomously; he did on 11/3 after three reels.)
+6. **Picture**: 1080×1920, "WE READ THEM" header, red countdown number, claim card struck the moment the record answers it, evidence band y 720–1440, captions y 1620, real document pages with highlights, clips ≤10 s cropped and greyscale, "Full film" end card. No dead screens.
+7. **Stills check** at 6–8 times: overlaps, clipped highlights, captions duplicating on-screen text, anything private in frame.
+8. **Mix, render, master** (limiter .42, true peak ≤ −1.2 dB, bt709, faststart).
+9. **Send** the phone copy with `SendUserFile` `display: attach` (inline players start muted).
+10. **Log** in the playbook status table and today's daily note.
+
+The intro reel (r0) ends "Here are ten things you probably don't know." and cuts. Countdown reels follow 10 → 1. At the end, `final/` gets numbered copies and one compilation.
+
+## Scripts (`scripts/`)
+| Script | Does |
+|---|---|
+| `onetake.py <reel>` | one-take narration → voice.wav/mp3 + takes.json (word timings per segment) |
+| `voice.py <dir> [idx]` | per-line takes from script.json (single fixes, legacy) |
+| `get-clips.sh <raw> <ids>` | yt-dlp news clips + info + auto subs |
+| `vault-get.sh <path> <out>` | FBI Vault PDF through the Wayback Machine |
+| `wall.py <out> <pdfs> --key n=i:p` | thumbnail wall of text-only record pages |
+Run Python with `~/lemo-opuscar/.venv/bin/python` (faster_whisper, soundfile, soxr). Needs `ELEVENLABS_API_KEY` in the environment.
+
+**If `LOCAL.md` exists next to this file, read it first** (machine-specific paths, keys, network notes; not published).
+
+## Traps that already cost us
+- YouTube / fbi.gov bot checks → you're on a VPN or datacenter exit; download from a home IP.
+- Agents' page citations can be wrong → verify every quote on the page image.
+- "Gabby misk", "U ESSSS PS" → dictionary rules (`Misc`→miscellaneous, `USPS`→U.S.P.S.).
+- Whisper hears "10" as "ten" → normalize numbers when matching segments.
+- Privacy in frame: channel names on FBI pages, other creators' arrows, plates, weapon lines on receipts, any photo of the victim.
+- "No sound" = muted inline player, not the file.
+- Biggest stat isn't the one to use; the defensible one is (650M+ TikTok views, not 1.2B).
