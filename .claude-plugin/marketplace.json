@@ -8,7 +8,7 @@
       "name": "we-read-them",
       "description": "True-crime reels and films built from the primary record of a real case.",
       "source": "./plugins/we-read-them",
-      "version": "1.3.0",
+      "version": "1.3.1",
       "category": "content",
       "tags": ["true-crime", "video", "reels", "documentary"]
     }

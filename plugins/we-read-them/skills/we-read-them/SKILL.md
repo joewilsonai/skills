@@ -41,6 +41,10 @@ Template: `templates/intro-page.html` + `intro-mix.py` + `intro-config.json` + `
 7. **Charged and dropped:** booking photo pinned over the indictment page with a stamp, then the dismissal page.
 8. **"Solved?":** the attention stats (what the crowd believes), then the wall of real pages and the list of what we read.
 9. **WE READ THEM card with her photo beside it**, then "10 things you probably don't know."
+**Retrofitting an old intro (Gabby, 11/4):** keep the approved voice take and swap only the picture. Opening photo for 2 to 3.5 s of the first line, then the old first scene; put footage on the lines that name people. Keep a copy of the old reel in `r0/v1/`, then rebuild the compilation.
+**Where the victim photo comes from:** the official poster first. FBI posters: Wayback `id_` capture of `fbi.gov/wanted/.../download.pdf`, then `pdfimages -png` pulls the photos at full size. Police and DPS cold-case pages often embed the photo as base64 in the HTML. Otherwise, a clean frame from a news clip.
+**Date every footage label from the clip's own metadata** (`<id>.info.json` title and upload date), not from memory: a presser I labelled "Sept. 2021" was Oct. 20.
+**End card photo:** keep it above the title (x 700, y 250, 320x400) so it never covers WE READ.
 Helpers in the template: `vid(k, t0, X, Y, w, h, {z})` plays a jpg sequence (cover-fit, freezes on its last frame; uses the global `TNOW`), `photo(img, X, Y, w, h, k)` is the colour push-in, `CLIPN` lists each clip's frame count. Cut clips 1.5-4 s; find frames with a contact sheet (`ffmpeg -vf "fps=1/3,scale=240:-1,tile=8x5"`) before cutting.
 
 ## The loop (one reel at a time)
