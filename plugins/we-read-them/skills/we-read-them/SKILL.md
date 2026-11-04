@@ -30,6 +30,19 @@ Footage-forward, the way Nancy Grace and Dateline do it: the victim's face, the 
 - **TV is a character.** Use the cable segments (Grace, HLN, network packages) as "what TV said," then answer them with the record.
 - Still never: minors other than the victim (blur or cut), home addresses, private bystanders, other creators' commentary videos.
 
+## The intro that works (Hailey v2, Joe: "that was fucking awesome")
+Template: `templates/intro-page.html` + `intro-mix.py` + `intro-config.json` + `intro-script.txt`. The beats, in order:
+1. **Open on the victim:** the official photo (police / cold-case / missing poster) in **colour**, slow push-in, name and age card. She is the only colour in the reel; everything else is greyscale.
+2. **"Never came home":** the missing billboard or flyer footage, then search footage.
+3. **The suspect on camera:** his own interview footage under the line that names him, with a name card ("her mother's live-in boyfriend").
+4. **The hook from the record:** a paper card of the affidavit line, highlighted as it's said.
+5. **The place:** location footage (the lake sign), then the schematic map.
+6. **His own voice:** a `C:` clip of his denial, on camera, labelled "original sound".
+7. **Charged and dropped:** booking photo pinned over the indictment page with a stamp, then the dismissal page.
+8. **"Solved?":** the attention stats (what the crowd believes), then the wall of real pages and the list of what we read.
+9. **WE READ THEM card with her photo beside it**, then "10 things you probably don't know."
+Helpers in the template: `vid(k, t0, X, Y, w, h, {z})` plays a jpg sequence (cover-fit, freezes on its last frame; uses the global `TNOW`), `photo(img, X, Y, w, h, k)` is the colour push-in, `CLIPN` lists each clip's frame count. Cut clips 1.5-4 s; find frames with a contact sheet (`ffmpeg -vf "fps=1/3,scale=240:-1,tile=8x5"`) before cutting.
+
 ## The loop (one reel at a time)
 1. **Research once per case** (references/research-and-footage.md). FACTS.md is the gate: nothing airs without a row.
 2. **Script.** Hook in 2 s → "Number N." as its own beat → the record → our take → closing line. Have an opinion grounded in what's on screen (Joe: "we shouldn't be so pc pilled"); name the innocent explanation, then why it still looks bad; never assert an uncharged crime. **Make every line visual**: find the real thing for each line (stat slams, timestamps, map, document line, quote card, clip, contradiction). Stats: one per full screen, big number + plain label + source tag, spoken, and **held** long enough to read.

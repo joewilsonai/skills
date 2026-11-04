@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>Reel 0: What the record says</title>
+<html lang="en"><head><meta charset="utf-8"><title>Reel 0: Hailey Dunn</title>
 <style>
 @font-face{font-family:Sans;src:url(fonts/sans400.woff2) format('woff2');font-weight:400;font-display:block}
 @font-face{font-family:Sans;src:url(fonts/sans700.woff2) format('woff2');font-weight:700;font-display:block}
@@ -9,7 +9,7 @@
 html,body{margin:0;background:#0B0C0E;overflow:hidden}canvas{display:block}
 </style></head><body><canvas id="c" width="1080" height="1920"></canvas>
 <script>
-// Reel 0 (vertical): series intro. The trip, the attention, the file, the tease. Visual Investigation style, 1080x1920.
+// Reel 0 (vertical): Hailey Dunn series intro. The polygraph, the county, the charge and the dismissal, the internet, the file. 1080x1920.
 const W = 1080, H = 1920, cv = document.getElementById('c'), x = cv.getContext('2d');
 const C = { bg:'#0B0C0E', panel:'#141619', line:'#2E3238', text:'#ECEAE4', dim:'#8B9097', faint:'#4A4F57', acc:'#FF4A2E', paper:'#E4E0D4', ink:'#1D1D1B' };
 const F = { sans:'Sans', mono:'Mono', it:'SerifI' };
@@ -17,20 +17,21 @@ const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v)), seg = (t, a, b) 
 const eo = k => 1 - Math.pow(1 - k, 3), eio = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2, lerp = (a, b, k) => a + (b - a) * k;
 function rnd(s) { return function () { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
+let TNOW = 0; const CLIPN = { bb: 50, sr: 52, lake: 90, road: 135, adk: 180, never: 112 }, CL = {};
 let WALL = null, IM = {}, GRAIN = [], FR = 0, REC = null, TK = null, CAP = [];
 async function boot() {
   TK = await (await fetch('takes.json')).json(); window.DUR = TK.dur + .8;
   WALL = await (await fetch('assets/wall.json')).json();
-  for (const [k, f] of [['rec', 'assets/fbi_p292.png'], ['p28', 'assets/fbi5_p28.png'], ['wall', 'assets/wall.jpg']]) IM[k] = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = f; });
+  for (const [k, f] of [['ind', 'assets/indictment.png'], ['m1', 'assets/motion_p1.jpg'], ['wall', 'assets/wall.jpg'], ['hailey', 'assets/hailey.jpg'], ['mug', 'assets/mug.png']]) IM[k] = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = f; });
+  for (const [k, n] of Object.entries(CLIPN)) CL[k] = await Promise.all(Array.from({ length: n }, (_, i) => new Promise(r => { const im = new Image(); im.onload = () => r(im); im.src = `assets/${k}/${String(i + 1).padStart(3, '0')}.jpg`; })));
   for (const f of ['700 40px Sans', '400 20px Sans', '400 20px Mono', '600 20px Mono', 'italic 24px SerifI']) await document.fonts.load(f);
   for (let g = 0; g < 6; g++) { const c = document.createElement('canvas'); c.width = c.height = 256; const gx = c.getContext('2d'), d = gx.createImageData(256, 256), r = rnd(g * 99 + 7);
     for (let i = 0; i < d.data.length; i += 4) { const v = 128 + (r() + r() + r() - 1.5) * 120; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; } gx.putImageData(d, 0, 0); GRAIN.push(c); }
-  // captions: script words, timed across each take in chunks of up to ~26 characters
-  for (const k of TK.takes) { const toks = k.text.replace(/…/g, '… ').split(/\s+/).filter(Boolean); const n = toks.length, w = k.words, m = w.length;
+  for (const k of TK.takes) { const toks = k.text.split(/\s+/).filter(Boolean); const n = toks.length, w = k.words, m = w.length;
     const at = j => m ? w[Math.min(m - 1, Math.round(j * (m - 1) / Math.max(1, n - 1)))][1] : k.t0 + (k.t1 - k.t0) * j / n;
     let cur = [], s0 = 0; toks.forEach((tk, j) => { cur.push(tk); const s = cur.join(' ');
       const rest = toks.slice(j + 1).join(' '); if (j < n - 1 && rest.length < 12 && (s + ' ' + rest).length <= 34) return;
-      if (s.length > 24 || (/[.!?]$/.test(tk) && s.length > 8) || j === n - 1) { CAP.push([at(s0), j === n - 1 ? k.t1 + .3 : at(j + 1), s.replace(/twenty twenty-one/, '2021').replace(/twenty-two/, '22').replace(/^Ten things/, '10 things').replace(/number ten/, 'number 10').replace(/are ten things/, 'are 10 things').replace(/September first/, 'September 1st').replace(/Six hundred fifty million/, '650 million')]); cur = []; s0 = j + 1; } }); }
+      if (s.length > 24 || (/[.!?]$/.test(tk) && s.length > 8) || j === n - 1) { CAP.push([at(s0), j === n - 1 ? k.t1 + .3 : at(j + 1), s.replace(/are ten things/, 'are 10 things')]); cur = []; s0 = j + 1; } }); }
   for (let i = 0; i < CAP.length - 1; i++) CAP[i][1] = Math.min(CAP[i][1], CAP[i + 1][0]);
   window.READY = true;
 }
@@ -46,87 +47,117 @@ function flash(t, at, X, Y, w, h, d = .12) { if (t < at) return; const k = 1 - s
 function grain(X, Y, w, h, a) { x.save(); x.beginPath(); x.rect(X, Y, w, h); x.clip(); x.globalCompositeOperation = 'overlay'; x.globalAlpha = a; const g = GRAIN[FR % 6];
   for (let gy = Y; gy < Y + h; gy += 256) for (let gx = X; gx < X + w; gx += 256) x.drawImage(g, gx, gy); x.restore(); }
 function tag(s, X, Y, o = {}) { txt(s, X + 16, Y, { s: o.s || 24, f: F.mono, c: o.c || C.dim, w: 600, a: o.a ?? 1, id: o.id }); x.save(); x.globalAlpha *= o.a ?? 1; fill(X, Y - 17, 7, 18, C.acc); x.restore(); }
-function ring(cx, cy, r, k) { if (k <= 0) return; x.save(); x.strokeStyle = C.acc; x.lineWidth = 4; x.beginPath(); x.ellipse(cx, cy, r * 1.9, r, 0, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * eo(k)); x.stroke(); x.restore(); }
-// the receipt page: source rect around (fx, fy) at zoom z, into panel; returns source-fraction -> screen
-function page(img, X, Y, w, h, fx, fy, z) { const IM = img; const iw = IM.width, ih = IM.height; let sw = iw / z, sh = sw * h / w; if (sh > ih) { sh = ih; sw = sh * w / h; }
+function page(img, X, Y, w, h, fx, fy, z) { const iw = img.width, ih = img.height; let sw = iw / z, sh = sw * h / w; if (sh > ih) { sh = ih; sw = sh * w / h; }
   const sx = clamp(iw * fx - sw / 2, 0, iw - sw), sy = clamp(ih * fy - sh / 2, 0, ih - sh);
-  x.save(); fill(X, Y, w, h, '#000'); x.filter = 'grayscale(1) contrast(1.05) brightness(0.86)'; x.drawImage(IM, sx, sy, sw, sh, X, Y, w, h); x.restore(); grain(X, Y, w, h, .1); rect(X, Y, w, h);
+  x.save(); fill(X, Y, w, h, '#000'); x.filter = 'grayscale(1) contrast(1.05) brightness(0.86)'; x.drawImage(img, sx, sy, sw, sh, X, Y, w, h); x.restore(); grain(X, Y, w, h, .1); rect(X, Y, w, h);
   const k = w / sw; return (u, v) => [X + (u * iw - sx) * k, Y + (v * ih - sy) * k]; }
-
+function hl(m, u0, u1, v, hh, k, clip) { const [a0, b0] = m(u0, v - hh), [a1, b1] = m(u1, v + hh); x.save(); x.beginPath(); x.rect(...clip); x.clip(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = .6; fill(a0, b0, (a1 - a0) * k, b1 - b0, C.acc); x.restore(); }
+function stamp(s, cx, cy, k, rot = -.08, sz = 92) { if (k <= 0) return; const sc = lerp(1.6, 1, eo(k)); x.save(); x.translate(cx, cy); x.rotate(rot); x.scale(sc, sc); x.globalAlpha = clamp(k * 3);
+  x.font = `700 ${sz}px ${F.mono}`; const w = x.measureText(s).width; x.strokeStyle = C.acc; x.lineWidth = 8; x.strokeRect(-w / 2 - 30, -sz * .85, w + 60, sz * 1.3); x.fillStyle = C.acc; x.textAlign = 'center'; x.fillText(s, 0, sz * .2); x.restore();
+  if (REC && k > .5) REC.push({ id: 'stamp' + s, text: s, x0: cx - 300, y0: cy - sz, x1: cx + 300, y1: cy + sz * .4 }); }
 
 function caption(t) { for (const [a, b, s] of CAP) if (t >= a && t < b) {
   const o = { s: 62, w: 700 }; const ls = wrap(s, 940, o); ls.forEach((l, i) => txt(l, W / 2, 1640 + i * 76, { ...o, al: 'center', shadow: 1, id: 'cap' + i })); } }
 const T = i => TK.takes[i];
 const word = (i, w) => (T(i).words.find(x => x[0].replace(/[.,?]/g, '').toLowerCase() === w) || [0, T(i).t0])[1];
-// schematic projection of the U.S. (no borders)
-const MB = [60, 330, 960, 900, -126, -68, 24, 48];
+
+// the polygraph: three pen traces scrolling on chart paper; at "refused" the pens go flat
+function poly(t) { const X = 60, Y = 360, w = 960, h = 700; fill(X, Y, w, h, C.paper); grain(X, Y, w, h, .1);
+  x.save(); x.beginPath(); x.rect(X, Y, w, h); x.clip(); x.strokeStyle = 'rgba(29,29,27,.12)'; x.lineWidth = 1;
+  const sh = (t * 120) % 40; for (let gx = X - sh; gx < X + w; gx += 40) hair(gx, Y, gx, Y + h, 'rgba(29,29,27,.10)'); for (let gy = Y; gy < Y + h; gy += 40) hair(X, gy, X + w, gy, 'rgba(29,29,27,.10)');
+  const names = ['RESP.', 'GSR', 'CARDIO']; for (let p = 0; p < 3; p++) { const cy = Y + 140 + p * 210, r = rnd(p * 31 + 5);
+    x.strokeStyle = p === 1 ? C.acc : C.ink; x.lineWidth = 3; x.beginPath();
+    for (let px = 0; px <= w - 120; px += 4) { const tt = t - (w - 120 - px) / 120; const amp = p === 1 ? 40 + 50 * Math.sin(tt * .7) ** 2 : 46;
+      const v = p === 0 ? Math.sin(tt * 2.2) : p === 1 ? Math.sin(tt * 1.1) * .6 + Math.sin(tt * 3.7) * .25 : (Math.sin(tt * 7) > .85 ? 1.6 : Math.sin(tt * 7) * .35);
+      const y = cy + v * amp; px ? x.lineTo(X + px, y) : x.moveTo(X + px, y); } x.stroke();
+    txt(names[p], X + w - 100, cy - 60, { s: 22, f: F.mono, w: 600, c: '#555' }); }
+  x.restore(); rect(X, Y, w, h); tag('Polygraph · Jan. 2011 · illustration', 60, 340); }
+// West Texas schematic: Mitchell and Scurry counties (north is up), real lat/long for the pins
+const MB = [140, 330, 800, 1060, -101.30, -100.55, 32.02, 33.02];
 function proj(lo, la) { const [x0, y0, w, h, a, b, c, d] = MB; return [x0 + (lo - a) / (b - a) * w, y0 + (d - la) / (d - c) * h]; }
-const ROUTE = [['Blue Point, N.Y.', -73.03, 40.74, 'July 2'], ['Moab, Utah', -109.55, 38.57, 'Aug. 12'], ['Spread Creek, Wyo.', -110.57, 43.77, 'Aug. 27'], ['North Port, Fla.', -82.24, 27.04, 'Sept. 1']];
-function pin(px, py, label, sub, o = {}) { x.save(); x.fillStyle = o.c || C.text; x.globalAlpha *= o.a ?? 1; x.beginPath(); x.arc(px, py, 10, 0, 7); x.fill(); x.restore();
-  const al = o.al || 'left', dx = al === 'left' ? 22 : -22; txt(label, px + dx, py + 10, { s: 34, w: 700, al, a: o.a ?? 1, id: 'pin' + label }); if (sub) txt(sub, px + dx, py + 46, { s: 24, f: F.mono, c: C.dim, al, a: o.a ?? 1 }); }
-function dash(a, b, k, c) { x.save(); x.strokeStyle = c; x.lineWidth = 4; x.setLineDash([14, 9]); x.beginPath(); x.moveTo(a[0], a[1]); x.lineTo(lerp(a[0], b[0], k), lerp(a[1], b[1], k)); x.stroke(); x.restore(); }
-function map(t) { const [x0, y0, w, h] = MB; x.save(); x.globalAlpha = .7; for (let lo = -125; lo <= -70; lo += 5) { const [px] = proj(lo, 30); hair(px, y0, px, y0 + h, '#1c1f23'); }
-  for (let la = 25; la <= 48; la += 5) { const [, py] = proj(-100, la); hair(x0, py, x0 + w, py, '#1c1f23'); } x.restore(); rect(x0, y0, w, h);
-  tag('Schematic · the trip, July–Sept. 2021', 60, 310);
-  const P = ROUTE.map(r => proj(r[1], r[2])); const k = eo(seg(t, T(0).t0 + .6, T(0).t1 - .4)) * 2;
-  for (let i = 0; i < 2; i++) { const kk = clamp(k - i); if (kk > 0) dash(P[i], P[i + 1], kk, C.text); }
-  pin(...P[0], ROUTE[0][0], ROUTE[0][3], { al: 'right' }); if (k > 1) pin(...P[1], ROUTE[1][0], ROUTE[1][3], { a: seg(k, 1, 1.05) }); if (k >= 2) pin(...P[2], ROUTE[2][0], ROUTE[2][3], { a: seg(k, 1.99, 2) });
-  const th = word(1, 'home'); if (t >= th) { const kr = eo(seg(t, th, th + 1.3)); dash(P[2], P[3], kr, C.acc); if (kr >= 1) pin(...P[3], ROUTE[3][0], 'Sept. 1 · he comes home alone', { c: C.acc, al: 'right' }); } }
-const STATS = [['650M+', 'views of #GabbyPetito', 'on TikTok', 'USA Today, Sept. 2021'], ['\u22483\u00d7', 'Google searches for her', 'in a single day, Sept. 14', 'Google Trends via Business Insider'],
-  ['No. 3', 'Google\u2019s top searches', 'in America, all of 2021', 'Google Year in Search via Patch']];
+function pin(px, py, label, sub, o = {}) { x.save(); x.fillStyle = o.c || C.text; x.globalAlpha *= o.a ?? 1; x.beginPath(); x.arc(px, py, 11, 0, 7); x.fill(); x.restore();
+  const al = o.al || 'left', dx = al === 'left' ? 24 : -24; txt(label, px + dx, py + 11, { s: 36, w: 700, al, a: o.a ?? 1, c: o.c, id: 'pin' + label }); if (sub) txt(sub, px + dx, py + 50, { s: 25, f: F.mono, c: o.sc || C.dim, al, a: o.a ?? 1, id: 'pins' + label }); }
+function map(t, tF, tL) { const [mx0, my0] = proj(-101.18, 32.53), [mx1, my1] = proj(-100.66, 32.08), [sx0, sy0] = proj(-101.18, 32.97);
+  const kS = eo(seg(t, tF - .3, tF + .3));
+  x.save(); x.fillStyle = `rgba(255,74,46,${.18 * kS})`; x.fillRect(sx0, sy0, mx1 - mx0, my0 - sy0); x.restore();
+  x.save(); x.strokeStyle = C.dim; x.lineWidth = 3; x.strokeRect(mx0, my0, mx1 - mx0, my1 - my0); x.strokeStyle = kS > .5 ? C.acc : C.dim; x.strokeRect(sx0, sy0, mx1 - mx0, my0 - sy0); x.restore();
+  txt('MITCHELL CO.', mx1 - 20, my1 - 26, { s: 30, f: F.mono, w: 600, c: C.dim, al: 'right', id: 'mc' }); txt('SCURRY CO.', mx1 - 20, sy0 + 50, { s: 30, f: F.mono, w: 600, c: kS > .5 ? C.acc : C.dim, al: 'right', id: 'sc' });
+  const cc = proj(-100.864, 32.388), sn = proj(-100.917, 32.718), lk = proj(-101.13, 32.60);
+  pin(...cc, 'Colorado City', 'missing · Dec. 27, 2010'); pin(...sn, 'Snyder', '', { a: .6 });
+  { const k = eo(seg(t, tF, tF + .4)); if (k > 0) { x.save(); x.strokeStyle = C.acc; x.lineWidth = 4; x.beginPath(); x.arc(lk[0], lk[1], 14 + 50 * (1 - k), 0, 7); x.globalAlpha = k; x.stroke(); x.restore();
+    pin(...lk, 'Lake J.B. Thomas', 'found · Mar. 16, 2013', { c: C.acc, sc: C.acc, a: k, al: 'left' }); } }
+  if (t >= tL) { const k = eo(seg(t, tL, tL + .9)); x.save(); x.strokeStyle = C.text; x.lineWidth = 4; x.setLineDash([14, 9]); x.beginPath(); x.moveTo(...cc); x.lineTo(lerp(cc[0], lk[0], k), lerp(cc[1], lk[1], k)); x.stroke(); x.restore();
+    const mx = (cc[0] + lk[0]) / 2, my = (cc[1] + lk[1]) / 2; txt('≈ 30 miles', mx + 30, my + 40, { s: 40, w: 700, a: seg(t, tL + .6, tL + .8), id: 'mi' }); }
+  tag('Schematic · county lines approx. · CBS Texas: ~30 mi NW', 60, 300); }
+// footage: a greyscale jpg sequence, cover-fit into a box, frozen on its last frame
+function vid(k, t0, X, Y, w, h, o = {}) { const fr = CL[k], i = clamp(Math.floor((TNOW - t0) * 30), 0, fr.length - 1), im = fr[i], z = o.z || 1;
+  const s = Math.max(w / im.width, h / im.height) * z, dw = im.width * s, dh = im.height * s;
+  x.save(); x.beginPath(); x.rect(X, Y, w, h); x.clip(); fill(X, Y, w, h, '#000'); x.filter = 'contrast(1.08) brightness(0.9)'; x.drawImage(im, X + (w - dw) / 2 + (o.dx || 0), Y + (h - dh) / 2 + (o.dy || 0), dw, dh); x.restore(); grain(X, Y, w, h, .12); rect(X, Y, w, h); }
+// her photo: colour, slow push-in (the only colour in the reel)
+function photo(img, X, Y, w, h, k, fy = .4) { const z = lerp(1.0, 1.12, k), s = Math.max(w / img.width, h / img.height) * z, dw = img.width * s, dh = img.height * s;
+  x.save(); x.beginPath(); x.rect(X, Y, w, h); x.clip(); x.drawImage(img, X + (w - dw) / 2, Y + (h - dh) * fy, dw, dh); x.restore(); grain(X, Y, w, h, .06); rect(X, Y, w, h); }
+const STATS = [['2,661', 'upvotes', 'the Reddit post on his arrest, June 2021'], ['1', 'upvote', 'the Reddit post on his release, June 2023']];
 window.render = function (t) {
-  FR = Math.floor(t * 30); fill(0, 0, W, H, C.bg);
-  const tEnd0 = TK.takes[12].t0; if (t < tEnd0 || t >= TK.takes[13].t0) { txt('WE READ THEM', 60, 120, { s: 26, f: F.mono, w: 600, c: C.dim, id: 'hd' }); txt('Gabby Petito, 2021', 60, 160, { s: 26, f: F.mono, c: C.faint }); }
-  const tFile = T(7).t0, tBox = T(9).t0, tDad = T(10).t0, tFbi = T(11).t0, tEnd = T(12).t0;
-  if (t < T(4).t0) map(t);
-  else if (t < tFile) { // the attention: one stat per full screen, held through its line and the pause after
-    const i = t < T(5).t0 ? 0 : t < T(6).t0 ? 1 : 2, at = T(4 + i).t0 - .05; const [n, l1, l2, src] = STATS[i];
-    flash(t, at, 0, 300, W, 1100, .14);
-    txt(n, W / 2, 900, { s: n.length > 4 ? 260 : 320, w: 700, f: F.mono, c: C.acc, al: 'center', id: 'st' + i });
-    txt(l1, W / 2, 1040, { s: 56, w: 700, al: 'center', a: seg(t, at + .25, at + .35), id: 'sl' + i });
-    txt(l2, W / 2, 1110, { s: 44, c: C.dim, al: 'center', a: seg(t, at + .25, at + .35), id: 'sm' + i });
-    const sw = tw(src, { s: 24, f: F.mono, w: 600 }); tag(src, W / 2 - sw / 2 - 8, 1200, { s: 24 });
-    for (let j = 0; j < 3; j++) { x.save(); x.fillStyle = j === i ? C.acc : C.faint; x.beginPath(); x.arc(W / 2 - 40 + j * 40, 1290, 9, 0, 7); x.fill(); x.restore(); } }
-  else if (t < tBox) { // the file: a wall of real FBI pages fills in, counting to 1,030; on "We read them" the pages we used light up
-    const { cols, rows, tw: TW, th: TH, key, order } = WALL, n = cols * rows, X0 = 0, Y0 = 330, D = (T(8).t0 + 1.4) - tFile, tw0 = T(8).t1 + .1;
-    const z = 1 + .45 * eio(seg(t, tw0 - .1, tw0 + 1.2)), [fc, fr] = key.receipt, fx = X0 + (fc + .5) * TW, fy = Y0 + (fr + .5) * TH;
-    const S = (px, py) => [fx + (px - fx) * z, fy + (py - fy) * z];
-    x.save(); x.beginPath(); x.rect(0, 300, W, 1110); x.clip(); x.filter = 'brightness(0.9)';
-    let shown = 0;
-    for (let k = 0; k < n; k++) { const slot = order[k], at = tFile + D * Math.pow(k / n, .55); if (t < at) continue; shown++;
-      const c = slot % cols, r = Math.floor(slot / cols), isKey = Object.values(key).some(([kc, kr]) => kc === c && kr === r);
-      const [sx, sy] = S(X0 + c * TW, Y0 + r * TH); x.globalAlpha = (t > tw0 && !isKey ? lerp(1, .35, seg(t, tw0, tw0 + .4)) : 1) * seg(t, at, at + .08);
-      x.drawImage(IM.wall, c * TW, r * TH, TW, TH, sx, sy, TW * z, TH * z); }
-    x.restore(); grain(0, 300, W, 1110, .08);
-    Object.values(key).forEach(([c, r], j) => { const at = tw0 + .15 + j * .3; if (t < at) return; const [sx, sy] = S(X0 + c * TW, Y0 + r * TH);
-      x.save(); x.strokeStyle = C.acc; x.lineWidth = 5; x.strokeRect(sx, sy, TW * z, TH * z); x.restore();
-      x.save(); x.translate(sx + TW * z - 4, sy + 4); x.fillStyle = C.acc; x.fillRect(-18, -18, 36, 36); x.strokeStyle = '#fff'; x.lineWidth = 4; x.beginPath(); x.moveTo(-9, 0); x.lineTo(-2, 8); x.lineTo(10, -8); x.stroke(); x.restore(); });
-    const cnt = Math.round(1030 * shown / n);
-    x.save(); fill(0, 196, W, 150, 'rgba(11,12,14,.88)'); x.restore();
-    txt(cnt.toLocaleString('en-US') + (cnt >= 1030 ? '+' : ''), 60, 300, { s: 110, w: 700, f: F.mono, c: C.acc, id: 'cnt' });
-    txt('pages', 60 + tw(cnt.toLocaleString('en-US') + (cnt >= 1030 ? '+' : ''), { s: 110, w: 700, f: F.mono }) + 24, 300, { s: 54, w: 700, id: 'pgs' });
-    tag('FBI Vault \u00b7 released June\u2013Dec. 2024', 60, 1440, { s: 26 }); }
-  else if (t < tDad) { flash(t, tBox, 0, 700, W, 560); const m = page(IM.rec, 0, 700, W, 560, .38, .405, lerp(1.55, 1.65, seg(t, tBox, tDad)));
-    const [a0, b0] = m(.075, .405), [a1, b1] = m(.69, .425); const hk = eo(seg(t, tBox + .5, tBox + 1.2));
-    x.save(); x.beginPath(); x.rect(0, 700, W, 560); x.clip(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = .6; fill(a0, b0, (a1 - a0) * hk, b1 - b0, C.acc); x.restore();
-    tag('FBI FD-597, receipt for property · Sept. 20, 2021', 60, 680, {}); }
-  else if (t < tFbi) { flash(t, tDad, 60, 640, 960, 520); fill(60, 640, 960, 520, C.paper); grain(60, 640, 960, 520, .1);
-    txt('Q. And what did he say to you?', 100, 720, { s: 28, f: F.mono, c: '#555' });
-    const hk = eo(seg(t, tDad + .3, tDad + 1.0)); x.save(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = .6; fill(96, 860, 820 * hk, 76, C.acc); x.restore();
-    txt('“…and told me things had -- you', 100, 830, { s: 50, f: F.it, it: true, c: C.ink, id: 'q1' }); txt('know, ‘Gabby’s gone’…”', 100, 914, { s: 50, f: F.it, it: true, c: C.ink, id: 'q2' });
-    tag('Deposition · Christopher Laundrie · 2023 · p. 69', 60, 620, {}); }
-  else if (t < tEnd) { flash(t, tFbi, 0, 700, W, 420); const m = page(IM.p28, 0, 700, W, 420, .5, .845, 1.6);
-    const hl = (v, u1, at) => { const [a0, b0] = m(.1, v - .009), [a1, b1] = m(u1, v + .009); const k = eo(seg(t, at, at + .6));
-      x.save(); x.beginPath(); x.rect(0, 700, W, 420); x.clip(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = .6; fill(a0, b0, (a1 - a0) * k, b1 - b0, C.acc); x.restore(); };
-    hl(.8195, .85, tFbi + .4); hl(.8425, .84, tFbi + .9); tag('FBI Tampa, review of a tipped YouTube channel · 2021', 60, 680, {}); }
-  else if (t < T(13).t0) { flash(t, tEnd, 0, 0, W, H, .16); // the series title
-    txt('WE READ', 60, 900, { s: 200, w: 700, id: 'wr1' }); txt('THEM.', 60, 1090, { s: 200, w: 700, c: C.acc, id: 'wr2' });
-    const k = eo(seg(t, tEnd + .3, tEnd + .9)); hair(64, 1150, 64 + 700 * k, 1150, C.acc, 6);
-    txt('Gabby Petito \u00b7 the FBI file', 64, 1220, { s: 40, f: F.mono, c: C.dim, a: seg(t, tEnd + .5, tEnd + .6), id: 'wrs' }); }
-  else { flash(t, T(13).t0, 0, 300, W, 1100);
+  TNOW = t; FR = Math.floor(t * 30); fill(0, 0, W, H, C.bg);
+  const tEnd = T(19).t0; if (t < tEnd || t >= T(20).t0) { txt('WE READ THEM', 60, 120, { s: 26, f: F.mono, w: 600, c: C.dim, id: 'hd' }); txt('Hailey Dunn, 2010', 60, 160, { s: 26, f: F.mono, c: C.faint }); }
+  if (t < T(1).t0) { const k = seg(t, 0, T(1).t0); x.save(); x.globalAlpha = seg(t, 0, .5); photo(IM.hailey, 160, 300, 760, 1000, k); x.restore();
+    const kn = eo(seg(t, .6, 1.1)); x.save(); x.globalAlpha = kn; fill(160, 1220, 760, 150, 'rgba(11,12,14,.86)'); x.restore();
+    txt('Hailey Dunn, 13', 190, 1300, { s: 60, w: 700, a: kn, id: 'hn' }); txt('Colorado City, Texas', 190, 1350, { s: 30, f: F.mono, c: C.dim, a: kn, id: 'hn2' });
+    tag('Texas DPS cold case photo', 160, 285, { s: 22 }); }
+  else if (t < T(2).t0) { const t1 = T(1).t0, half = t1 + 1.5;
+    if (t < half) { vid('bb', t1, 0, 420, W, 760); tag('Billboard, Jan. 2011 · KAMC', 60, 400, { s: 23 }); }
+    else { vid('sr', half, 0, 420, W, 760); tag('Volunteer search, 2011 · KAMC', 60, 400, { s: 23 }); } }
+  else if (t < T(3).t0) { const t2 = T(2).t0; vid('adk', t2, 0, 380, W, 760, { z: 1.1 }); tag('Shawn Adkins, 2011 interview · KTAB/KRBC', 60, 360, { s: 23 });
+    const k = eo(seg(t, word(2, 'adkins') - .1, word(2, 'adkins') + .3)); x.save(); x.globalAlpha = k; fill(60, 1170, 960, 170, C.panel); x.restore();
+    txt('Shawn Adkins', 100, 1250, { s: 60, w: 700, a: k, id: 'nm' }); txt('her mother’s live-in boyfriend', 100, 1310, { s: 32, f: F.mono, c: C.dim, a: k, id: 'nm2' }); }
+  else if (t < T(5).t0) { const t2 = T(3).t0, t3 = T(4).t0; flash(t, t2, 60, 420, 960, 760); fill(60, 420, 960, 760, C.paper); grain(60, 420, 960, 760, .1);
+    txt('From the search affidavit:', 100, 500, { s: 28, f: F.mono, c: '#555' });
+    const L1 = ['“Adkins indicated that Hailey', 'Dunn could be found in', 'Scurry County.”'], L2 = ['“…he refused to answer', 'the question.”'];
+    const hk = eo(seg(t, word(3, 'scurry') - .2, word(3, 'scurry') + .5)); x.save(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = .6; fill(96, 700, 520 * hk, 74, C.acc); x.restore();
+    L1.forEach((l, i) => txt(l, 100, 600 + i * 86, { s: 58, f: F.it, it: true, c: C.ink, id: 'q' + i }));
+    if (t >= t3) { const k = seg(t, t3, t3 + .25); L2.forEach((l, i) => txt(l, 100, 920 + i * 86, { s: 58, f: F.it, it: true, c: C.ink, a: k, id: 'r' + i }));
+      const hk2 = eo(seg(t, word(4, 'refused') - .1, word(4, 'refused') + .6)); x.save(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = .6; fill(96, 868, 800 * hk2, 74, C.acc); x.restore(); }
+    tag('Search affidavit, as reported · NewsWest 9 · Jan. 12, 2011', 60, 1230, { s: 23 }); }
+  else if (t < T(6).t0) { const t5 = T(5).t0; flash(t, t5, 0, 420, W, 760); vid('lake', t5, 0, 420, W, 760); tag('Lake J.B. Thomas, Scurry County · NewsWest 9, March 2013', 60, 400, { s: 23 }); }
+  else if (t < T(7).t0) map(t, T(6).t0 - .4, T(6).t0 + .2);
+  else if (t < T(8).t0) { vid('road', T(7).t0, 0, 420, W, 760); tag('Near the site, March 2013 · NewsWest 9', 60, 400, { s: 23 }); }
+  else if (t < T(9).t0) { const t8 = T(8).t0; vid('never', t8, 0, 380, W, 760, { z: 1.1 }); tag('Shawn Adkins, 2011 interview · KTAB/KRBC', 60, 360, { s: 23 });
+    txt('original sound', 60, 1190, { s: 26, f: F.mono, w: 600, c: C.acc, id: 'os' }); }
+  else if (t < T(11).t0) { const t7 = T(9).t0, t8 = T(10).t0;
+    if (t < t8) { flash(t, t7, 0, 420, W, 900); const m = page(IM.ind, 0, 420, W, 900, .3, .2, 1.9); hl(m, .03, .55, .193, .012, eo(seg(t, word(9, 'charged'), word(9, 'charged') + .6)), [0, 420, W, 900]);
+      const km = eo(seg(t, t7 + .2, t7 + .6)); x.save(); x.globalAlpha = km; x.translate(700, 860); x.rotate(.04); fill(-12, -12, 334, 444, '#fff'); x.drawImage(IM.mug, 0, 0, 310, 420); x.restore();
+      txt('Adkins, 2021 booking photo · via KCBD', 560, 1345, { s: 22, f: F.mono, c: C.dim, a: km });
+      stamp('CHARGED 2021', 360, 1160, seg(t, word(9, 'murder'), word(9, 'murder') + .25)); tag('Indictment No. 8269 · Mitchell County · Dec. 30, 2021', 60, 400, { s: 23 }); }
+    else { flash(t, t8, 0, 420, W, 900); const m = page(IM.m1, 0, 420, W, 900, .5, .22, 1.5); hl(m, .16, .83, .247, .012, eo(seg(t, t8 + .3, t8 + 1)), [0, 420, W, 900]);
+      stamp('DISMISSED', W / 2, 1150, seg(t, word(10, 'dropped'), word(10, 'dropped') + .25)); tag('State’s motion to dismiss · filed June 26, 2023', 60, 400, { s: 23 }); } }
+  else if (t < T(14).t0) { if (t < T(12).t0) { const t9 = T(11).t0; flash(t, t9, 0, 300, W, 1100, .14); txt('SOLVED?', W / 2, 900, { s: 200, w: 700, f: F.mono, al: 'center', id: 'slv', a: seg(t, t9, t9 + .2) });
+      txt('“Solved” videos on YouTube: 1–2 million views each', W / 2, 1040, { s: 30, f: F.mono, c: C.dim, al: 'center', a: seg(t, t9 + .4, t9 + .6), id: 'slv2' }); }
+    else { const i = t < T(13).t0 ? 0 : 1, at = T(12 + i).t0 - .05, [n, l1, l2] = STATS[i]; flash(t, at, 0, 300, W, 1100, .14);
+      txt(n, W / 2, 900, { s: 320, w: 700, f: F.mono, c: C.acc, al: 'center', id: 'st' + i }); txt(l1, W / 2, 1040, { s: 60, w: 700, al: 'center', a: seg(t, at + .25, at + .35), id: 'sl' + i });
+      txt(l2, W / 2, 1110, { s: 34, c: C.dim, al: 'center', a: seg(t, at + .25, at + .35), id: 'sm' + i });
+      const src = 'r/UnresolvedMysteries · scores as archived', sw = tw(src, { s: 24, f: F.mono, w: 600 }); tag(src, W / 2 - sw / 2 - 8, 1200);
+      for (let j = 0; j < 2; j++) { x.save(); x.fillStyle = j === i ? C.acc : C.faint; x.beginPath(); x.arc(W / 2 - 20 + j * 40, 1290, 9, 0, 7); x.fill(); x.restore(); } } }
+  else if (t < tEnd) { // the record: a wall of the real court pages; the indictments light up, then the list of what we read
+    const t12 = T(14).t0, { cols, rows, tw: TW, th: TH, key, order } = WALL, n = cols * rows, Y0 = 330, D = T(15).t0 + .6 - t12;
+    x.save(); x.beginPath(); x.rect(0, 300, W, 1110); x.clip(); x.filter = 'brightness(0.85)'; let shown = 0;
+    for (let k = 0; k < n; k++) { const slot = order[k], at = t12 + D * Math.pow(k / n, .55); if (t < at) continue; shown++; const c = slot % cols, r = Math.floor(slot / cols);
+      const isKey = Object.values(key).some(([kc, kr]) => kc === c && kr === r); x.globalAlpha = (t > T(15).t0 && !isKey ? lerp(1, .3, seg(t, T(15).t0, T(15).t0 + .4)) : 1) * seg(t, at, at + .08);
+      x.drawImage(IM.wall, c * TW, r * TH, TW, TH, c * TW, Y0 + r * TH, TW, TH); } x.restore(); grain(0, 300, W, 1110, .08);
+    if (t >= T(15).t0) Object.values(key).forEach(([c, r], j) => { if (t < T(15).t0 + .1 + j * .3) return; x.save(); x.strokeStyle = C.acc; x.lineWidth = 5; x.strokeRect(c * TW, Y0 + r * TH, TW, TH); x.restore(); });
+    const cnt = Math.round(122 * shown / n); x.save(); fill(0, 196, W, 150, 'rgba(11,12,14,.88)'); x.restore();
+    const cs = cnt.toString(); txt(cs, 60, 300, { s: 110, w: 700, f: F.mono, c: C.acc, id: 'cnt' }); txt('pages of court record', 60 + tw(cs, { s: 110, w: 700, f: F.mono }) + 24, 300, { s: 44, w: 700, id: 'pgs' });
+    const L = [[15, 'Two indictments · 2021'], [16, 'Motion to dismiss · 2023'], [17, 'Search affidavits · 2011, as reported'], [18, 'What was never tested']];
+    x.save(); fill(40, 1060, 1000, 330, 'rgba(11,12,14,.9)'); x.restore();
+    L.forEach(([i, s], j) => { if (t < T(i).t0) return; const k = seg(t, T(i).t0, T(i).t0 + .2); tag(s, 60, 1120 + j * 72, { s: 38, c: i === 18 ? C.acc : C.text, a: k, id: 'ls' + j }); }); }
+  else if (t < T(20).t0) { flash(t, tEnd, 0, 0, W, H, .16);
+    x.save(); x.globalAlpha = .9; photo(IM.hailey, 640, 330, 380, 500, seg(t, tEnd, tEnd + 3)); x.restore();
+    txt('WE READ', 60, 1000, { s: 200, w: 700, id: 'wr1' }); txt('THEM.', 60, 1190, { s: 200, w: 700, c: C.acc, id: 'wr2' });
+    const k = eo(seg(t, tEnd + .3, tEnd + .9)); hair(64, 1250, 64 + 700 * k, 1250, C.acc, 6);
+    txt('Hailey Dunn · the court file', 64, 1320, { s: 40, f: F.mono, c: C.dim, a: seg(t, tEnd + .5, tEnd + .6), id: 'wrs' }); }
+  else { flash(t, T(20).t0, 0, 300, W, 1100);
     txt('10', 60, 900, { s: 420, w: 700, f: F.mono, c: C.acc, id: 'ten' });
-    txt('things you probably', 64, 1030, { s: 64, w: 700, id: 'tyl1' }); txt('don\u2019t know', 64, 1110, { s: 64, w: 700, id: 'tyl2' }); }
-  if (t < tEnd || t >= T(13).t0 + 5) caption(t);
+    txt('things you probably', 64, 1030, { s: 64, w: 700, id: 'tyl1' }); txt('don’t know', 64, 1110, { s: 64, w: 700, id: 'tyl2' }); }
+  if (t < tEnd || t >= T(20).t0 + 5) caption(t);
 };
 window.TEXTS = t => { REC = []; window.render(t); const r = REC; REC = null; return r; };
 boot();
