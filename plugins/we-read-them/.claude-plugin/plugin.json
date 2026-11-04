@@ -1,6 +1,6 @@
 {
   "name": "we-read-them",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "True-crime reels and films built from the primary record: research agents, a facts gate, FBI Vault and court documents, real news footage under commentary, one-take ElevenLabs narration, code-rendered picture.",
   "author": { "name": "Joe Wilson", "url": "https://joewilson.ai" },
   "homepage": "https://github.com/joewilsonai/skills/tree/main/plugins/we-read-them",

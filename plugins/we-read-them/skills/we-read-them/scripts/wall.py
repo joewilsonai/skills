@@ -19,7 +19,7 @@ slots = [(5, 4), (13, 7), (8, 11), (16, 2), (3, 12)]; grid = [None] * n; info = 
 for (name, v), (c, r) in zip(keys.items(), slots):
     pi, pg = v.split(':'); f = [x for x in files if os.path.basename(x).startswith(f'p{pi}-') and int(x.rsplit('-', 1)[1][:-4]) == int(pg)][0]
     grid[r * COLS + c] = f; info[name] = [c, r]
-others = [f for f in keep if f not in grid]; it = iter(rng.choice(others, min(len(others), n), replace=len(others) < n))
+others = [f for f in keep if f not in grid]; it = iter(rng.choice(others, n, replace=len(others) < n))
 for i in range(n):
     if grid[i] is None: grid[i] = next(it)
 atlas = Image.new('L', (COLS * TW, ROWS * TH), 20)

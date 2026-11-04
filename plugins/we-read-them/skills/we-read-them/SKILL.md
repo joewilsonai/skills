@@ -5,7 +5,7 @@ description: Use when Joe wants a true-crime explainer — the "We Read Them" se
 
 # We Read Them
 
-Series (Joe named it 11/3/2026): **WE READ THEM.** We read the public record of a famous case so viewers don't have to, and show what it says against what everyone thinks they know. First case: Gabby Petito — full film "What the record says" (3:44) + intro + reels 10→1, built with this skill.
+Series (Joe named it 11/3/2026): **WE READ THEM.** We read the public record of a famous case so viewers don't have to, and show what it says against what everyone thinks they know. Case 1: Gabby Petito (film + 11 reels). Case 2: Hailey Dunn (11 reels, built start to finish by this skill in one night: one session wrote and verified the scripts, five builders ran two reels each).
 
 **Before anything, read the reference you need:**
 - `references/research-and-footage.md` — picking the case, the three research agents, FACTS.md, getting FBI Vault / deposition PDFs, downloading and cutting news clips, privacy rules.
@@ -49,7 +49,14 @@ Run Python with `~/lemo-opuscar/.venv/bin/python` (faster_whisper, soundfile, so
 
 **If `LOCAL.md` exists next to this file, read it first** (machine-specific paths, keys, network notes; not published).
 
+## Running it in parallel (case 2)
+Lock every script and the FACTS gate yourself first, build the intro yourself (it sets the case's look: header, helpers, fonts), then hand builders two reels each with: the locked script, their FACTS rows, the r0 folder as the look, `--workers 2` for renders. Builders verify their own VERIFY rows before voicing and may change a word only to fix a fact (they caught four: "two cities" → three, "believed he was" → "may have been", "three days later" → that same night, "all evidence" → some). Review each finished reel's frames before sending.
+
 ## Traps that already cost us
+- Whisper drops "Number" at the start of a take and writes "Hailey" as "Haley", "2021" as digits, "seven-page" as "seven -page": start words must match what Whisper writes (onetake normalizes numbers 1-20 and hyphens; use a bare "five" when "Number five" isn't heard).
+- Whisper starts a line at the end of the previous silence; onetake snaps each line to the real speech onset. Still glance at the printed starts.
+- Check the true peak after every mux: soft clicks and the AAC encoder can push a -1.2 dB master over 0. A second limiter pass in mix.py, or softer clicks, fixes it.
+- News packages open on the victim's photo: cut around it, crop to the speaker's box, or use a quote card instead of the clip.
 - YouTube / fbi.gov bot checks → you're on a VPN or datacenter exit; download from a home IP.
 - Agents' page citations can be wrong → verify every quote on the page image.
 - "Gabby misk", "U ESSSS PS" → dictionary rules (`Misc`→miscellaneous, `USPS`→U.S.P.S.).

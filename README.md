@@ -23,7 +23,7 @@ The skill runs a case end to end:
 - **Picture:** vertical 1080×1920 reels rendered in code (Canvas, deterministic) with [lemo-opuscar](https://github.com/lemomo-ai/lemo-opuscar), real document pages highlighted on screen, stats that hold long enough to read.
 - **Mix and master:** bed, hits and foley under the voice, −14 LUFS, true peak ≤ −1.2 dB.
 
-First case: Gabby Petito. A 3:44 film and eleven reels (intro plus a ten-to-one countdown), November 2026.
+Case 1: Gabby Petito, a 3:44 film and eleven reels. Case 2: Hailey Dunn, eleven reels built start to finish by the skill in one night, with builders running in parallel. November 2026.
 
 Requires: `ffmpeg`, `yt-dlp`, `poppler` (pdftoppm), Node, Python with `faster-whisper`, `soundfile`, `numpy`, `Pillow`, an ElevenLabs key in `ELEVENLABS_API_KEY`, and lemo-opuscar for rendering.
 
