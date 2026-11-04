@@ -23,6 +23,13 @@ work/<bucket>/<case>/
 ```
 Reel dir: `index.html` (picture), `mix.py`, `one/script.txt`, `one/config.json`, `assets/`, `fonts/`, output `reel-NN.mp4` + `-phone.mp4`. Start from `templates/` (`reel-page.html` = document-led, `reel-page-footage.html` = clip-led, `intro-page.html` + `intro-mix.py` = series intro with the page wall and stat screens).
 
+## Show the people (Joe, 11/3, after case 2: "people want to see who we are talking about")
+Footage-forward, the way Nancy Grace and Dateline do it: the victim's face, the people in the case talking on camera, TV hosts and reporters saying what TV said, police at the podium, the places. Documents prove the point; footage is what people watch.
+- **Show the victim.** Her photo as it appears in news clips, the public missing poster, the official cold-case/police photo. Not: standalone family snapshots lifted from social media, funeral or memorial footage, remains or crime scene.
+- **Every reel gets real footage** (target 30-50% of runtime): the person the reel is about, on camera, in their own voice where it exists. A quote card is the fallback when no footage exists, not the default.
+- **TV is a character.** Use the cable segments (Grace, HLN, network packages) as "what TV said," then answer them with the record.
+- Still never: minors other than the victim (blur or cut), home addresses, private bystanders, other creators' commentary videos.
+
 ## The loop (one reel at a time)
 1. **Research once per case** (references/research-and-footage.md). FACTS.md is the gate: nothing airs without a row.
 2. **Script.** Hook in 2 s → "Number N." as its own beat → the record → our take → closing line. Have an opinion grounded in what's on screen (Joe: "we shouldn't be so pc pilled"); name the innocent explanation, then why it still looks bad; never assert an uncharged crime. **Make every line visual**: find the real thing for each line (stat slams, timestamps, map, document line, quote card, clip, contradiction). Stats: one per full screen, big number + plain label + source tag, spoken, and **held** long enough to read.
@@ -56,7 +63,7 @@ Lock every script and the FACTS gate yourself first, build the intro yourself (i
 - Whisper drops "Number" at the start of a take and writes "Hailey" as "Haley", "2021" as digits, "seven-page" as "seven -page": start words must match what Whisper writes (onetake normalizes numbers 1-20 and hyphens; use a bare "five" when "Number five" isn't heard).
 - Whisper starts a line at the end of the previous silence; onetake snaps each line to the real speech onset. Still glance at the printed starts.
 - Check the true peak after every mux: soft clicks and the AAC encoder can push a -1.2 dB master over 0. A second limiter pass in mix.py, or softer clicks, fixes it.
-- News packages open on the victim's photo: cut around it, crop to the speaker's box, or use a quote card instead of the clip.
+- Case 2 shipped with almost no footage (4 of 11 reels) and no photo of the victim because of an over-cautious rule. Don't repeat it: plan the footage per reel at script time.
 - YouTube / fbi.gov bot checks → you're on a VPN or datacenter exit; download from a home IP.
 - Agents' page citations can be wrong → verify every quote on the page image.
 - "Gabby misk", "U ESSSS PS" → dictionary rules (`Misc`→miscellaneous, `USPS`→U.S.P.S.).
