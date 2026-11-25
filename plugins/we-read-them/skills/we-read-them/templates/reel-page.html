@@ -19,8 +19,18 @@ function rnd(s) { return function () { s |= 0; s = s + 0x6D2B79F5 | 0; let t = M
 
 
 let IM = {}, GRAIN = [], FR = 0, REC = null, TK = null, CAP = [];
+let renderSourceEdit;
 async function boot() {
   TK = await (await fetch('takes.json')).json(); window.DUR = TK.dur + .8;
+  if (window.WRT_SOURCE_EDIT) {
+    const {prepareSourceEdit} = await import('./source-edit.js');
+    const edit = await prepareSourceEdit({canvas:cv,takes:TK,config:window.WRT_SOURCE_EDIT,drawText:txt,measure:tw});
+    renderSourceEdit = edit.render;
+    window.WRT_CHAPTER_META = edit.meta;
+    window.DUR = edit.duration;
+    window.READY = true;
+    return;
+  }
   for (const [k, f] of [['p3', 'assets/fbi_p3.png'], ['p81', 'assets/fbi_p81.png']]) IM[k] = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = f; });
   for (const f of ['700 40px Sans', '400 20px Sans', '400 20px Mono', '600 20px Mono', 'italic 24px SerifI']) await document.fonts.load(f);
   for (let g = 0; g < 6; g++) { const c = document.createElement('canvas'); c.width = c.height = 256; const gx = c.getContext('2d'), d = gx.createImageData(256, 256), r = rnd(g * 99 + 7);
@@ -68,6 +78,7 @@ function dash(a, b, k, c) { x.save(); x.strokeStyle = c; x.lineWidth = 5; x.setL
 function hlLine(m, u0, u1, v, k, clipR) { const [a0, b0] = m(u0, v - .009), [a1, b1] = m(u1, v + .009);
   x.save(); x.beginPath(); x.rect(...clipR); x.clip(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = .6; fill(a0, b0, (a1 - a0) * eo(k), b1 - b0, C.acc); x.restore(); }
 window.render = function (t) {
+  if (renderSourceEdit) {renderSourceEdit(t);return;}
   FR = Math.floor(t * 30); fill(0, 0, W, H, C.bg);
   txt('WE READ THEM', 60, 120, { s: 26, f: F.mono, w: 600, c: C.dim, id: 'hd' }); txt('Gabby Petito, 2021', 60, 160, { s: 26, f: F.mono, c: C.faint });
   // number + claim, struck when the record answers it

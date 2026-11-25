@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Voice one reel from its script.json -> voice.wav, voice.mp3, takes.json (take start/end in seconds, with word timings).
-script.json: [{"who": "N"|"R", "text": "...", "pause": seconds after, "speed": optional override}]  N = Smith (narrator), R = Harper (reads the record).
+script.json: [{"who": "N"|"R", "text": "...", "pause": seconds after, "speed": optional override}]  Smith narrates N and reads the attributed record for R.
 Takes are voiced with neighbouring lines as context; every call attaches the pronunciation dictionary.
 Usage: voice.py <reel dir> [take indexes to regenerate]   (default: all; existing takes are reused otherwise)"""
-import json, os, subprocess, sys, urllib.request
+import fcntl, hashlib, json, os, subprocess, sys, tempfile, urllib.request
 import numpy as np, soundfile as sf
 HERE = os.path.dirname(os.path.abspath(__file__)); KEY = os.environ['ELEVENLABS_API_KEY']
-V = {'N': 'TVtDNgumMv4lb9zzFzA2', 'R': 'Fihx1nL7DQV0DEuFJSG1'}
+NARRATOR_ID = 'TVtDNgumMv4lb9zzFzA2'
+V = {'N': NARRATOR_ID, 'R': NARRATOR_ID}
 S = {'N': {'stability': 0.45, 'similarity_boost': 0.8, 'style': 0.2, 'use_speaker_boost': True, 'speed': 1.12},
      'R': {'stability': 0.7, 'similarity_boost': 0.8, 'style': 0.0, 'use_speaker_boost': True, 'speed': 0.95}}
 D0 = sys.argv[1]
@@ -15,22 +16,60 @@ PD = json.load(open(PDP)); PRON = [{'pronunciation_dictionary_id': PD['id'], 've
 RETRIM = '--retrim' in sys.argv; ARGS = [a for a in sys.argv[1:] if a != '--retrim']
 D = ARGS[0]; ONLY = {int(a) for a in ARGS[1:]}
 SC = json.load(open(os.path.join(D, 'script.json'))); os.makedirs(os.path.join(D, 'takes'), exist_ok=True); SR = 44100
+run_lock = open(os.path.join(D, 'takes', '.voice.lock'), 'a')
+try:
+    fcntl.flock(run_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+except BlockingIOError:
+    sys.exit(f'Another per-line voice build is active in {D}')
+def take_path(i, who, extension):
+    # A previous reader's cached audio must not be used for a same-narrator reading.
+    name = f't{i}-reader-{NARRATOR_ID}' if who == 'R' else f't{i}'
+    return os.path.join(D, 'takes', name + extension)
+
+if ONLY:
+    for i, take in enumerate(SC):
+        if i in ONLY or take['who'] != 'R' or os.path.exists(take_path(i, 'R', '.wav')):
+            continue
+        old_wav = os.path.join(D, 'takes', f't{i}.wav')
+        if os.path.exists(old_wav):
+            sys.exit(f'Include index {i} to update this written reading to the episode narrator.')
+
 def tts(i, who, text):
     prev = ' '.join(s['text'] for s in SC[:i] if s['who'] == who)[-300:]; nxt = ' '.join(s['text'] for s in SC[i + 1:] if s['who'] == who)[:300]
     vs = dict(S[who]); vs['speed'] = SC[i].get('speed', vs['speed'])   # a line can ask for its own speed (a title, a hard fact)
     body = {'text': text, 'model_id': 'eleven_multilingual_v2', 'voice_settings': vs, 'previous_text': prev, 'next_text': nxt, 'pronunciation_dictionary_locators': PRON}
     req = urllib.request.Request(f'https://api.elevenlabs.io/v1/text-to-speech/{V[who]}?output_format=mp3_44100_192', data=json.dumps(body).encode(), headers={'xi-api-key': KEY, 'Content-Type': 'application/json'})
-    mp3 = os.path.join(D, f'takes/t{i}.mp3')
-    if not (RETRIM and os.path.exists(mp3)): open(mp3, 'wb').write(urllib.request.urlopen(req, timeout=120).read())
-    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', mp3, '-af', 'silenceremove=start_periods=1:start_threshold=-55dB:start_silence=0.04,areverse,silenceremove=start_periods=1:start_threshold=-55dB:start_silence=0.12,areverse,afade=t=in:d=0.02,areverse,afade=t=in:d=0.08,areverse', '-ac', '1', '-ar', str(SR), os.path.join(D, f'takes/t{i}.wav')], check=True)
+    mp3 = take_path(i, who, '.mp3')
+    request_hash = hashlib.sha256(V[who].encode() + req.data).hexdigest()
+    pending = f'{mp3}.{request_hash}.received'
+    with tempfile.TemporaryDirectory(dir=os.path.dirname(mp3)) as stage:
+        if not os.path.exists(pending) and not (RETRIM and os.path.exists(mp3)):
+            download = os.path.join(stage, 'download.mp3')
+            with urllib.request.urlopen(req, timeout=120) as response, open(download, 'wb') as dest:
+                dest.write(response.read())
+                declared = response.headers.get('Content-Length')
+            if declared and os.path.getsize(download) != int(declared):
+                raise IOError('Incomplete ElevenLabs audio response')
+            os.replace(download, pending)
+        source = pending if os.path.exists(pending) else mp3
+        trimmed = os.path.join(stage, 'trimmed.wav')
+        subprocess.run(['ffmpeg', '-v', 'error', '-xerror', '-y', '-i', source, '-af', 'silenceremove=start_periods=1:start_threshold=-55dB:start_silence=0.04,areverse,silenceremove=start_periods=1:start_threshold=-55dB:start_silence=0.12,areverse,afade=t=in:d=0.02,areverse,afade=t=in:d=0.08,areverse', '-ac', '1', '-ar', str(SR), trimmed], check=True)
+        if source == pending:
+            # Keep the received take until both cache files are installed. A retry
+            # can finish the local trim without ordering this performance again.
+            install = os.path.join(stage, 'install.mp3')
+            os.link(pending, install)
+            os.replace(install, mp3)
+        os.replace(trimmed, take_path(i, who, '.wav'))
+        if source == pending:
+            os.unlink(pending)
 out, t, takes = [np.zeros(int(.3 * SR))], .3, []
 from faster_whisper import WhisperModel
 M = WhisperModel('small.en', compute_type='int8')
 for i, s in enumerate(SC):
-    w = os.path.join(D, f'takes/t{i}.wav')
+    w = take_path(i, s['who'], '.wav')
     if not os.path.exists(w) or not ONLY or i in ONLY:
-        if ONLY and i not in ONLY and os.path.exists(w): pass
-        else: tts(i, s['who'], s['text'])
+        tts(i, s['who'], s['text'])
     x, _ = sf.read(w); x = x / (np.sqrt(np.mean(x[np.abs(x) > .01] ** 2)) + 1e-9) * .1; d = len(x) / SR
     seg, _ = M.transcribe(w, word_timestamps=True); words = [[ww.word.strip(), round(t + ww.start, 2), round(t + ww.end, 2)] for g in seg for ww in g.words]
     takes.append({'i': i, 'who': s['who'], 'text': s['text'], 't0': round(t, 3), 't1': round(t + d, 3), 'heard': ' '.join(x[0] for x in words), 'words': words})

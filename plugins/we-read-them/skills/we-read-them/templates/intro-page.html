@@ -19,8 +19,18 @@ function rnd(s) { return function () { s |= 0; s = s + 0x6D2B79F5 | 0; let t = M
 
 let TNOW = 0; const CLIPN = { bb: 50, sr: 52, lake: 90, road: 135, adk: 180, never: 112 }, CL = {};
 let WALL = null, IM = {}, GRAIN = [], FR = 0, REC = null, TK = null, CAP = [];
+let renderSourceEdit;
 async function boot() {
   TK = await (await fetch('takes.json')).json(); window.DUR = TK.dur + .8;
+  if (window.WRT_SOURCE_EDIT) {
+    const {prepareSourceEdit} = await import('./source-edit.js');
+    const edit = await prepareSourceEdit({canvas:cv,takes:TK,config:window.WRT_SOURCE_EDIT,drawText:txt,measure:tw});
+    renderSourceEdit = edit.render;
+    window.WRT_CHAPTER_META = edit.meta;
+    window.DUR = edit.duration;
+    window.READY = true;
+    return;
+  }
   WALL = await (await fetch('assets/wall.json')).json();
   for (const [k, f] of [['ind', 'assets/indictment.png'], ['m1', 'assets/motion_p1.jpg'], ['wall', 'assets/wall.jpg'], ['hailey', 'assets/hailey.jpg'], ['mug', 'assets/mug.png']]) IM[k] = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = f; });
   for (const [k, n] of Object.entries(CLIPN)) CL[k] = await Promise.all(Array.from({ length: n }, (_, i) => new Promise(r => { const im = new Image(); im.onload = () => r(im); im.src = `assets/${k}/${String(i + 1).padStart(3, '0')}.jpg`; })));
@@ -98,6 +108,7 @@ function photo(img, X, Y, w, h, k, fy = .4) { const z = lerp(1.0, 1.12, k), s = 
   x.save(); x.beginPath(); x.rect(X, Y, w, h); x.clip(); x.drawImage(img, X + (w - dw) / 2, Y + (h - dh) * fy, dw, dh); x.restore(); grain(X, Y, w, h, .06); rect(X, Y, w, h); }
 const STATS = [['2,661', 'upvotes', 'the Reddit post on his arrest, June 2021'], ['1', 'upvote', 'the Reddit post on his release, June 2023']];
 window.render = function (t) {
+  if (renderSourceEdit) {renderSourceEdit(t);return;}
   TNOW = t; FR = Math.floor(t * 30); fill(0, 0, W, H, C.bg);
   const tEnd = T(19).t0; if (t < tEnd || t >= T(20).t0) { txt('WE READ THEM', 60, 120, { s: 26, f: F.mono, w: 600, c: C.dim, id: 'hd' }); txt('Hailey Dunn, 2010', 60, 160, { s: 26, f: F.mono, c: C.faint }); }
   if (t < T(1).t0) { const k = seg(t, 0, T(1).t0); x.save(); x.globalAlpha = seg(t, 0, .5); photo(IM.hailey, 160, 300, 760, 1000, k); x.restore();

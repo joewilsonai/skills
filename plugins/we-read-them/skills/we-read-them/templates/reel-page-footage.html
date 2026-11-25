@@ -19,8 +19,20 @@ function rnd(s) { return function () { s |= 0; s = s + 0x6D2B79F5 | 0; let t = M
 
 
 let IM = {}, GRAIN = [], FR = 0, REC = null, TK = null, CAP = [];
+// To opt into the source-led edit, copy source-edit.js beside this page and define
+// window.WRT_SOURCE_EDIT before the main script. Without it, the original scenes run.
+let renderSourceEdit;
 async function boot() {
   TK = await (await fetch('takes.json')).json(); window.DUR = TK.dur + .8;
+  if (window.WRT_SOURCE_EDIT) {
+    const {prepareSourceEdit} = await import('./source-edit.js');
+    const edit = await prepareSourceEdit({canvas:cv,takes:TK,config:window.WRT_SOURCE_EDIT,drawText:txt,measure:tw});
+    renderSourceEdit = edit.render;
+    window.WRT_CHAPTER_META = edit.meta;
+    window.DUR = edit.duration;
+    window.READY = true;
+    return;
+  }
   
   IM.van = []; await Promise.all(Array.from({ length: 330 }, (_, i) => new Promise(r => { const im = new Image(); im.onload = () => { IM.van[i] = im; r(); }; im.src = `assets/van/${String(i + 1).padStart(3, '0')}.jpg`; })));
   for (const f of ['700 40px Sans', '400 20px Sans', '400 20px Mono', '600 20px Mono', 'italic 24px SerifI']) await document.fonts.load(f);
@@ -73,6 +85,7 @@ function frame(img, X, Y, w, h, fx, fy, z = 1) { const iw = img.width, ih = img.
   x.save(); fill(X, Y, w, h, '#000'); x.filter = 'grayscale(1) contrast(1.22) brightness(0.94)'; x.drawImage(img, sx, sy, sw, sh, X, Y, w, h); x.restore(); grain(X, Y, w, h, .22); rect(X, Y, w, h);
   const k = w / sw; return (u, v) => [X + (u * iw - sx) * k, Y + (v * ih - sy) * k]; }
 window.render = function (t) {
+  if (renderSourceEdit) return renderSourceEdit(t);
   FR = Math.floor(t * 30); fill(0, 0, W, H, C.bg);
   txt('WE READ THEM', 60, 120, { s: 26, f: F.mono, w: 600, c: C.dim, id: 'hd' }); txt('Gabby Petito, 2021', 60, 160, { s: 26, f: F.mono, c: C.faint });
   const tVan = (T(1).words.find(w => /van/i.test(w[0])) || [0, T(1).t1 - .5])[1], tCall = T(2).t0, tQ = T(3).t0, tNot = T(4).t0, tAgent = T(5).t0, tEnd = T(6).t0;

@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; media-src 'self' file:; script-src 'unsafe-inline'; style-src 'unsafe-inline'; form-action 'none'; base-uri 'none'">
+<title>Clip review</title>
+<style>
+  :root { color-scheme: light dark; font: 1rem/1.45 system-ui, sans-serif }
+  body { max-width: 40rem; margin: 1.5rem auto; padding: 0 1rem }
+  video { display: block; width: 100%; max-height: 65vh; object-fit: contain; background: black }
+  label { display: block; margin: 1rem 0 }
+  textarea, select { display: block; font: inherit; margin-top: .3rem; max-width: 100% }
+  textarea { width: 100%; box-sizing: border-box }
+  button { font: inherit; margin: .4rem .4rem .4rem 0; padding: .45rem .8rem }
+</style>
+</head>
+<body>
+<main>
+<h1 id="heading" tabindex="-1">Clip review</h1>
+<noscript>Enable JavaScript in this browser to run the local review.</noscript>
+<section id="watch" hidden>
+  <p>Watch once at normal speed with sound if you can. Use the controls you need.</p>
+  <div id="player"></div>
+  <p id="playerError" role="status"></p>
+  <button type="button" id="stop">End this viewing early</button>
+</section>
+<form id="recall" hidden>
+  <label>What happened, in your own words?
+    <textarea id="retell" rows="3" placeholder="It’s fine to say “I couldn’t tell.”" required></textarea>
+  </label>
+  <label>Did you hear the sound?
+    <select id="sound" required><option value="">Choose one</option><option>Yes, throughout</option>
+      <option>Part of the clip</option><option>No sound heard</option></select>
+  </label>
+  <label>Any playback problems? (optional)<textarea id="problem" rows="2"></textarea></label>
+  <button type="submit">Lock answer and continue</button>
+  <button type="button" id="replay">Play this clip again</button>
+</form>
+<form id="comparison" hidden>
+  <p id="question"></p>
+  <div id="prompted"></div>
+  <label>Which clip was easier to follow?
+    <select id="choice" required><option value="">Choose one</option><option>A</option>
+      <option>B</option><option>About the same</option><option>I couldn’t judge</option></select>
+  </label>
+  <label>What, if anything, was clearer in one clip or got lost in the other?
+    <textarea id="detail" rows="2" placeholder="You can say “nothing” or “unsure.”" required></textarea>
+  </label>
+  <label>Before this review, how familiar were you with the topic or these clips?
+    <select id="familiarity" required><option value="">Choose one</option><option>New to both</option>
+      <option>Knew the topic</option><option>Had seen either clip</option>
+      <option>Knew the topic and had seen either clip</option><option>Unsure</option></select>
+  </label>
+  <button type="submit">Download completed answers</button>
+</form>
+<button type="button" id="partial" hidden>Download answers so far</button>
+<p id="status" role="status"></p>
+</main>
+<script>
+const config = __VIEW_CONFIG__;
+const order = [config.first, config.first === "A" ? "B" : "A"];
+const byId = id => document.getElementById(id);
+const report = {version: 1, trial: config.trial, order, views: [], comparison: null};
+let player, view, recording;
+
+function show(id, heading) {
+  for (const section of ["watch", "recall", "comparison"]) byId(section).hidden = section !== id;
+  byId("heading").textContent = heading;
+  byId("heading").focus();
+}
+
+function position(value) {
+  return Number.isFinite(value) ? Number(value.toFixed(3)) : null;
+}
+
+function playerEvent(name) {
+  if (recording) view.events.push({event: name, at_seconds: position(player.currentTime),
+    rate: player.playbackRate, muted: player.muted, volume: player.volume});
+}
+
+function displaySize() {
+  const {width, height} = player.getBoundingClientRect();
+  const scale = Math.min(width / player.videoWidth, height / player.videoHeight);
+  return {player_width_css_px: position(width), player_height_css_px: position(height),
+    picture_width_css_px: position(player.videoWidth * scale),
+    picture_height_css_px: position(player.videoHeight * scale),
+    fullscreen: Boolean(document.fullscreenElement || document.webkitFullscreenElement ||
+      player.webkitDisplayingFullscreen)};
+}
+
+function fullscreenChanged(active = displaySize().fullscreen) {
+  if (!recording) return;
+  if (active) view.fullscreen_observed = true;
+  playerEvent(active ? "entered_fullscreen" : "left_fullscreen");
+}
+document.addEventListener("fullscreenchange", () => fullscreenChanged());
+
+function playbackCoverage() {
+  const played = player.played;
+  return {duration_seconds: position(player.duration), played_ranges_seconds:
+    Array.from({length: played.length}, (_, i) => [position(played.start(i)), position(played.end(i))])};
+}
+
+function endViewing(reason) {
+  if (!recording) return;
+  playerEvent(reason);
+  recording = false;
+  player.pause();
+  view.endings.push(reason);
+  Object.assign(view, playbackCoverage());
+  show("recall", "Your answer for clip " + view.label);
+  byId("partial").hidden = false;
+}
+
+function openClip(label) {
+  byId("recall").reset();
+  byId("playerError").textContent = "";
+  view = {label, events: [], endings: [], duration_seconds: null, played_ranges_seconds: [],
+    first_play_display: null, fullscreen_observed: false};
+  recording = true;
+  const video = document.createElement("video");
+  player = video;
+  video.controls = true;
+  video.playsInline = true;
+  video.preload = "metadata";
+  video.setAttribute("aria-label", "Clip " + label);
+  video.addEventListener("playing", () => {
+    if (video !== player || !recording || view.first_play_display) return;
+    view.first_play_display = displaySize();
+    view.fullscreen_observed ||= view.first_play_display.fullscreen;
+  });
+  video.addEventListener("webkitbeginfullscreen", () => { if (video === player) fullscreenChanged(true); });
+  video.addEventListener("webkitendfullscreen", () => { if (video === player) fullscreenChanged(false); });
+  for (const event of ["play", "pause", "seeking", "seeked", "ratechange", "volumechange"]) {
+    video.addEventListener(event, () => {
+      if (video === player && !(event === "pause" && video.ended)) playerEvent(event);
+    });
+  }
+  video.addEventListener("ended", () => { if (video === player) endViewing("ended"); });
+  video.addEventListener("error", () => {
+    if (video !== player) return;
+    playerEvent("media_error");
+    byId("playerError").textContent = "This browser couldn’t play the clip. End this viewing early to record the problem.";
+  });
+  video.src = label + config.suffix;
+  byId("player").replaceChildren(video);
+  show("watch", "Clip " + label + " · " + (report.views.length + 1) + " of 2");
+}
+
+byId("stop").onclick = () => endViewing("stopped_early");
+byId("replay").onclick = () => {
+  recording = true;
+  playerEvent("replay_requested");
+  show("watch", "Clip " + view.label + " · replay");
+  player.currentTime = 0;
+  player.play().catch(() => { byId("playerError").textContent = "Use the player controls to start playback."; });
+};
+
+function recallValues() {
+  return {retell: byId("retell").value.trim(), sound_heard: byId("sound").value,
+    playback_problems: byId("problem").value.trim()};
+}
+
+byId("recall").onsubmit = event => {
+  event.preventDefault();
+  if (!byId("retell").value.trim()) return byId("retell").focus();
+  Object.assign(view, recallValues());
+  report.views.push(view);
+  if (report.views.length === 1) return openClip(order[1]);
+  byId("question").textContent = config.question;
+  for (const label of order) {
+    const field = document.createElement("label");
+    field.textContent = "Your answer for clip " + label;
+    const input = document.createElement("textarea");
+    input.id = "answer" + label;
+    input.rows = 2;
+    input.required = true;
+    input.placeholder = "It’s fine to say “I couldn’t tell.”";
+    field.append(input);
+    byId("prompted").append(field);
+  }
+  show("comparison", "Compare the clips");
+};
+
+function comparisonValues() {
+  const answers = {};
+  for (const label of order) answers[label] = byId("answer" + label).value.trim();
+  return {question: config.question, prompted_answers: answers, preference: byId("choice").value,
+    detail: byId("detail").value.trim(), prior_familiarity: byId("familiarity").value};
+}
+
+function download(complete) {
+  const snapshot = {...report, complete};
+  if (!complete && report.views.length < order.length) {
+    snapshot.unlocked_view = {...view, ...playbackCoverage(), ...recallValues()};
+  }
+  if (!byId("comparison").hidden) snapshot.comparison = comparisonValues();
+  const blob = new Blob([JSON.stringify(snapshot, null, 2) + "\n"],
+    {type: "application/json"});
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "clip-review-" + config.trial.slice(0, 12) + "-" + order[0] +
+    "-first" + (complete ? "" : "-partial") + ".json";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 30000);
+  byId("status").textContent = "Download requested. Look in your browser’s downloads for the JSON file.";
+}
+
+byId("partial").onclick = () => download(false);
+byId("comparison").onsubmit = event => {
+  event.preventDefault();
+  for (const label of order) {
+    const field = byId("answer" + label);
+    if (!field.value.trim()) return field.focus();
+  }
+  if (!byId("detail").value.trim()) return byId("detail").focus();
+  byId("partial").hidden = true;
+  download(true);
+};
+
+openClip(order[0]);
+</script>
+</body>
+</html>

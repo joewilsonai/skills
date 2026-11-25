@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Reel N (wide): CASE</title>
+<style>
+@font-face{font-family:Sans;src:url(fonts/sans400.woff2) format('woff2');font-weight:400;font-display:block}
+@font-face{font-family:Sans;src:url(fonts/sans700.woff2) format('woff2');font-weight:700;font-display:block}
+@font-face{font-family:Mono;src:url(fonts/mono400.woff2) format('woff2');font-weight:400;font-display:block}
+@font-face{font-family:Mono;src:url(fonts/mono600.woff2) format('woff2');font-weight:600;font-display:block}
+@font-face{font-family:SerifI;src:url(fonts/serifi.woff2) format('woff2');font-style:italic;font-weight:400;font-display:block}
+html,body{margin:0;background:#0B0C0E;overflow:hidden}canvas{display:block}
+</style></head><body><canvas id="c" width="1920" height="1080"></canvas>
+<script>
+// WE READ THEM, landscape (1920x1080) layout for the long-form YouTube cut. Same voice, takes.json and mix as the vertical reel;
+// only the picture is laid out again. Every position comes from L, so a scene never hard-codes a coordinate it can take from a box.
+//
+//   ┌──────────────────────────────────────────────────────────────────────────┐
+//   │ WE READ THEM / case            tag ▌source line                          │
+//   │                                ┌───────────────── BAND ─────────────────┐ │
+//   │  10      (red number)          │ footage, document page, stat, photo    │ │
+//   │  “Claim card,                  │ 1160 x 652 (16:9)                      │ │
+//   │   struck when answered.”       │                     name card ▬▬▬      │ │
+//   │  what people believe           └────────────────────────────────────────┘ │
+//   │                 read from the record                                      │
+//   │                Captions, two lines max, centred on the frame             │
+//   └──────────────────────────────────────────────────────────────────────────┘
+// FULL = the whole stage (x 80..1840, y 120..860) for scenes that need everything: the wall, the timeline, the end card.
+const W = 1920, H = 1080, cv = document.getElementById('c'), x = cv.getContext('2d');
+const L = {
+  hd: [80, 74], hdCase: [80, 104],                         // header (mono 22 / 22)
+  num: { x: 80, y: 330, s: 210 },                          // countdown number baseline
+  claim: { x: 80, y: 430, w: 540, s: 46, lh: 58 },         // claim card lines (sans 700), struck in red
+  claimLabel: { x: 82, dy: 34 },                           // small mono label under the last claim line
+  band: [680, 140, 1160, 652],                             // the evidence box (16:9)
+  tagY: 124,                                               // source tag baseline, x = band[0]
+  name: { x: 700, y: 742 },                                // name card baseline inside the band, bottom-left
+  rd: { y: 900 },                                          // "read from the record" label
+  cap: { cx: 960, y: 960, w: 1560, s: 50, lh: 62 },        // captions
+  full: [80, 140, 1760, 720],                              // whole stage
+};
+const C = { bg:'#0B0C0E', panel:'#141619', line:'#2E3238', text:'#ECEAE4', dim:'#8B9097', faint:'#4A4F57', acc:'#FF4A2E', paper:'#E4E0D4', ink:'#1D1D1B' };
+const F = { sans:'Sans', mono:'Mono', it:'SerifI' };
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v)), seg = (t, a, b) => clamp((t - a) / (b - a));
+const eo = k => 1 - Math.pow(1 - k, 3), lerp = (a, b, k) => a + (b - a) * k;
+function rnd(s) { return function () { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+// CASE SETUP: clip frame counts (assets/<key>/001.jpg...), images, header line
+const CASE = 'Case Name, 1996';
+let TNOW = 0; const CLIPN = { /* key: frames */ }, CL = {};
+const IMAGES = [ /* ['key', 'assets/file.jpg'] */ ];
+let IM = {}, GRAIN = [], FR = 0, REC = null, TK = null, CAP = [];
+// To opt into the source-led edit, copy source-edit.js beside this page and define
+// window.WRT_SOURCE_EDIT before the main script. Without it, the original scenes run.
+let renderSourceEdit;
+async function boot() {
+  TK = await (await fetch('takes.json')).json(); window.DUR = TK.dur + .8;
+  if (window.WRT_SOURCE_EDIT) {
+    const {prepareSourceEdit} = await import('./source-edit.js');
+    const edit = await prepareSourceEdit({canvas:cv,takes:TK,config:window.WRT_SOURCE_EDIT,drawText:txt,measure:tw});
+    renderSourceEdit = edit.render;
+    window.WRT_CHAPTER_META = edit.meta;
+    window.DUR = edit.duration;
+    window.READY = true;
+    return;
+  }
+  for (const [k, f] of IMAGES) IM[k] = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = f; });
+  for (const [k, n] of Object.entries(CLIPN)) CL[k] = await Promise.all(Array.from({ length: n }, (_, i) => new Promise(r => { const im = new Image(); im.onload = () => r(im); im.src = `assets/${k}/${String(i + 1).padStart(3, '0')}.jpg`; })));
+  for (const f of ['700 40px Sans', '400 20px Sans', '400 20px Mono', '600 20px Mono', 'italic 24px SerifI']) await document.fonts.load(f);
+  for (let g = 0; g < 6; g++) { const c = document.createElement('canvas'); c.width = c.height = 256; const gx = c.getContext('2d'), d = gx.createImageData(256, 256), r = rnd(g * 99 + 7);
+    for (let i = 0; i < d.data.length; i += 4) { const v = 128 + (r() + r() + r() - 1.5) * 120; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; } gx.putImageData(d, 0, 0); GRAIN.push(c); }
+  // captions: same splitter as the vertical reels, longer lines because the frame is wider
+  for (const k of TK.takes) { const toks = k.text.split(/\s+/).filter(Boolean); const n = toks.length, w = k.words, m = w.length;
+    const at = j => m ? w[Math.min(m - 1, Math.round(j * (m - 1) / Math.max(1, n - 1)))][1] : k.t0 + (k.t1 - k.t0) * j / n;
+    let cur = [], s0 = 0; toks.forEach((tk, j) => { cur.push(tk); const s = cur.join(' ');
+      const rest = toks.slice(j + 1).join(' '); if (j < n - 1 && rest.length < 14 && (s + ' ' + rest).length <= 52) return;
+      if (s.length > 40 || (/[.!?”]$/.test(tk) && s.length > 10) || j === n - 1) { CAP.push([at(s0), j === n - 1 ? k.t1 + .3 : at(j + 1), s, k.who]); cur = []; s0 = j + 1; } }); }
+  for (let i = 0; i < CAP.length - 1; i++) CAP[i][1] = Math.min(CAP[i][1], CAP[i + 1][0]);
+  window.READY = true;
+}
+function tw(s, o = {}) { x.save(); x.font = `${o.it ? 'italic ' : ''}${o.w || 400} ${o.s || 24}px ${o.f || F.sans}`; const w = x.measureText(s).width; x.restore(); return w; }
+function txt(s, X, Y, o = {}) { x.save(); x.font = `${o.it ? 'italic ' : ''}${o.w || 400} ${o.s || 24}px ${o.f || F.sans}`; x.fillStyle = o.c || C.text; x.globalAlpha *= (o.a ?? 1);
+  x.textAlign = o.al || 'left'; if (o.shadow) { x.shadowColor = 'rgba(0,0,0,.95)'; x.shadowBlur = 12; } x.fillText(s, X, Y); const w = x.measureText(s).width; const ga = x.globalAlpha; x.restore();
+  if (REC && o.id && ga > .5) { const sz = o.s || 24, x0 = o.al === 'center' ? X - w / 2 : o.al === 'right' ? X - w : X; REC.push({ id: o.id, text: s, x0, y0: Y - sz * .9, x1: x0 + w, y1: Y + sz * .25 }); } return w; }
+function wrap(s, maxW, o) { const t = s.split(/(?<= )/); const out = []; let l = ''; for (const k of t) { if (tw(l + k, o) > maxW && l) { out.push(l.trimEnd()); l = k.trimStart(); } else l += k; } if (l) out.push(l); return out; }
+function hair(x0, y0, x1, y1, c = C.line, w = 1) { x.save(); x.strokeStyle = c; x.lineWidth = w; x.beginPath(); x.moveTo(x0, y0); x.lineTo(x1, y1); x.stroke(); x.restore(); }
+function fill(X, Y, w, h, c) { x.fillStyle = c; x.fillRect(X, Y, w, h); }
+function rect(X, Y, w, h, c = C.line) { x.save(); x.strokeStyle = c; x.strokeRect(X + .5, Y + .5, w - 1, h - 1); x.restore(); }
+function flash(t, at, X, Y, w, h, d = .12) { if (t < at) return; const k = 1 - seg(t, at, at + d); if (k <= 0) return; x.save(); x.globalAlpha = k * .9; fill(X, Y, w, h, '#fff'); x.restore(); }
+function grain(X, Y, w, h, a) { x.save(); x.beginPath(); x.rect(X, Y, w, h); x.clip(); x.globalCompositeOperation = 'overlay'; x.globalAlpha = a; const g = GRAIN[FR % 6];
+  for (let gy = Y; gy < Y + h; gy += 256) for (let gx = X; gx < X + w; gx += 256) x.drawImage(g, gx, gy); x.restore(); }
+function tag(s, X = L.band[0], Y = L.tagY, o = {}) { txt(s, X + 14, Y, { s: o.s || 20, f: F.mono, c: o.c || C.dim, w: 600, a: o.a ?? 1, id: o.id }); x.save(); x.globalAlpha *= o.a ?? 1; fill(X, Y - 15, 6, 16, C.acc); x.restore(); }
+// a document page in a box, greyscale, with a mapper for highlights: m(u, v) -> canvas point (u, v in 0..1 of the page image)
+function page(img, X, Y, w, h, fx, fy, z) { const iw = img.width, ih = img.height; let sw = iw / z, sh = sw * h / w; if (sh > ih) { sh = ih; sw = sh * w / h; }
+  const sx = clamp(iw * fx - sw / 2, 0, iw - sw), sy = clamp(ih * fy - sh / 2, 0, ih - sh);
+  x.save(); fill(X, Y, w, h, '#000'); x.filter = 'grayscale(1) contrast(1.05) brightness(0.86)'; x.drawImage(img, sx, sy, sw, sh, X, Y, w, h); x.restore(); grain(X, Y, w, h, .1); rect(X, Y, w, h);
+  const k = w / sw; return (u, v) => [X + (u * iw - sx) * k, Y + (v * ih - sy) * k]; }
+function hl(m, u0, u1, v, hh, k, clip) { const [a0, b0] = m(u0, v - hh), [a1, b1] = m(u1, v + hh); x.save(); x.beginPath(); x.rect(...clip); x.clip(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = .6; fill(a0, b0, (a1 - a0) * k, b1 - b0, C.acc); x.restore(); }
+function stamp(s, cx, cy, k, rot = -.08, sz = 80) { if (k <= 0) return; const sc = lerp(1.6, 1, eo(k)); x.save(); x.translate(cx, cy); x.rotate(rot); x.scale(sc, sc); x.globalAlpha = clamp(k * 3);
+  x.font = `700 ${sz}px ${F.mono}`; const w = x.measureText(s).width; x.strokeStyle = C.acc; x.lineWidth = 7; x.strokeRect(-w / 2 - 26, -sz * .85, w + 52, sz * 1.3); x.fillStyle = C.acc; x.textAlign = 'center'; x.fillText(s, 0, sz * .2); x.restore();
+  if (REC && k > .5) REC.push({ id: 'stamp' + s, text: s, x0: cx - 300, y0: cy - sz, x1: cx + 300, y1: cy + sz * .4 }); }
+// footage: greyscale jpg sequence, cover-fit into a box (default: the band), frozen on its last frame
+function vid(k, t0, X = L.band[0], Y = L.band[1], w = L.band[2], h = L.band[3], o = {}) { const fr = CL[k], i = clamp(Math.floor((TNOW - t0) * 30), 0, fr.length - 1), im = fr[i], z = o.z || 1;
+  const s = (o.contain ? Math.min : Math.max)(w / im.width, h / im.height) * z, dw = im.width * s, dh = im.height * s;   // o.contain: letterbox instead of crop
+  x.save(); x.beginPath(); x.rect(X, Y, w, h); x.clip(); fill(X, Y, w, h, '#000'); x.filter = 'contrast(1.08) brightness(0.9)'; x.drawImage(im, X + (w - dw) * (o.fx ?? .5), Y + (h - dh) * (o.fy ?? .5), dw, dh); x.restore(); grain(X, Y, w, h, .12); rect(X, Y, w, h); }
+// the victim's photo: colour (the only colour in the film), contain-fit with a slow push-in, dark surround
+function photo(img, X = L.band[0], Y = L.band[1], w = L.band[2], h = L.band[3], k = 0) { const z = lerp(1.0, 1.08, k), s = Math.min(w / img.width, h / img.height) * z, dw = img.width * s, dh = img.height * s;
+  x.save(); fill(X, Y, w, h, '#000'); x.beginPath(); x.rect(X, Y, w, h); x.clip(); x.drawImage(img, X + (w - dw) / 2, Y + (h - dh) * .4, dw, dh); x.restore(); grain(X, Y, w, h, .05); rect(X, Y, w, h); }
+// lower-third name card inside the band
+function namecard(t, at, name, sub) { const k = eo(seg(t, at - .1, at + .3)); if (k <= 0) return; const { x: X, y: Y } = L.name, w = Math.max(tw(name, { s: 44, w: 700 }), tw(sub, { s: 22, f: F.mono })) + 48;
+  x.save(); x.globalAlpha = k * .92; fill(X - 20, Y - 58, w, 96, C.panel); x.restore(); txt(name, X, Y - 8, { s: 44, w: 700, a: k, id: 'nm' }); txt(sub, X, Y + 26, { s: 22, f: F.mono, c: C.dim, a: k, id: 'nm2' }); }
+// a stat, centred in the band: big number, plain label, source tag
+function stat(t, at, n, l1, l2, src, i) { const [X, Y, w, h] = L.band, cx = X + w / 2; flash(t, at, X, Y, w, h, .14);
+  txt(n, cx, Y + h * .52, { s: n.length > 6 ? 170 : 230, w: 700, f: F.mono, c: C.acc, al: 'center', id: 'st' + i }); txt(l1, cx, Y + h * .52 + 84, { s: 48, w: 700, al: 'center', a: seg(t, at + .2, at + .3), id: 'sl' + i });
+  if (l2) txt(l2, cx, Y + h * .52 + 134, { s: 28, c: C.dim, al: 'center', a: seg(t, at + .2, at + .3), id: 'sm' + i });
+  const sw = tw(src, { s: 20, f: F.mono, w: 600 }); tag(src, cx - sw / 2 - 8, Y + h - 26, { a: seg(t, at + .3, at + .4) }); }
+// left rail: header, number, claim card (struck at `strike`), label
+function rail(t, num, lines, strike, label) { txt('WE READ THEM', ...L.hd, { s: 22, f: F.mono, w: 600, c: C.dim, id: 'hd' }); txt(CASE, ...L.hdCase, { s: 22, f: F.mono, c: C.faint });
+  if (num != null) txt(String(num), L.num.x, L.num.y, { s: L.num.s, w: 700, f: F.mono, c: C.acc, id: 'num' });
+  if (!lines) return; const o = { s: L.claim.s, w: 700 }, k = strike != null && t >= strike ? eo(seg(t, strike, strike + .35)) : 0;
+  lines.forEach((l, i) => { const Y = L.claim.y + i * L.claim.lh; txt(l, L.claim.x, Y, { ...o, c: k > 0 ? C.dim : C.text, id: 'claim' + i });
+    if (k > 0) hair(L.claim.x - 6, Y - 16, L.claim.x - 6 + (tw(l, o) + 12) * k, Y - 16, C.acc, 5); });
+  if (label) txt(label, L.claimLabel.x, L.claim.y + (lines.length - 1) * L.claim.lh + L.claimLabel.dy, { s: 20, f: F.mono, c: C.dim, id: 'lab' }); }
+function caption(t) { for (const [a, b, s, who] of CAP) if (t >= a && t < b) {
+  const o = { s: L.cap.s, w: 700 }, ls = wrap(s, L.cap.w, o).slice(0, 2), y0 = L.cap.y - (ls.length - 1) * L.cap.lh / 2;
+  if (who === 'R') txt('read from the record', L.cap.cx, L.rd.y, { s: 22, f: F.mono, c: C.acc, al: 'center', w: 600, shadow: 1, id: 'rd' });
+  if (who === 'C') txt('original sound', L.cap.cx, L.rd.y, { s: 22, f: F.mono, c: C.acc, al: 'center', w: 600, shadow: 1, id: 'os' });
+  ls.forEach((l, i) => txt(l, L.cap.cx, y0 + i * L.cap.lh, { ...o, al: 'center', shadow: 1, c: who === 'R' || who === 'C' ? '#FFD9D2' : C.text, id: 'cap' + i })); } }
+const T = i => TK.takes[i];
+const word = (i, w) => (T(i).words.find(q => q[0].replace(/[.,?:;“”"]/g, '').toLowerCase() === w) || [0, T(i).t0])[1];
+// end card (the long-form stitch keeps only the last reel's; set ENDCARD_AT = the time it starts and write it to meta.json)
+let ENDCARD_AT = null;
+function endcard(t, at, img) { const k = seg(t, at, at + .35); x.save(); x.globalAlpha = k;
+  if (img) photo(img, 1260, 160, 520, 640, seg(t, at, at + 3));
+  txt('WE READ', 100, 520, { s: 170, w: 700, id: 'e1' }); txt('THEM.', 100, 680, { s: 170, w: 700, c: C.acc, id: 'e2' }); hair(104, 730, 104 + 620 * eo(k), 730, C.acc, 6);
+  txt(`We Read Them · ${CASE.split(',')[0]}`, 104, 800, { s: 34, f: F.mono, c: C.dim, id: 'e3' }); x.restore(); }
+
+window.render = function (t) {
+  if (renderSourceEdit) return renderSourceEdit(t);
+  TNOW = t; FR = Math.floor(t * 30); fill(0, 0, W, H, C.bg);
+  // SCENES: write each beat against L (rail + band), keyed to takes (T(i).t0, word(i, 'x')).
+  // rail(t, 10, ['“Claim line one,', 'line two.”'], word(3, 'record'), 'what people believe');
+  // vid('clip', T(1).t0); tag('Source · date'); namecard(t, T(1).t0 + .1, 'Name', 'role · year');
+  caption(t);
+};
+window.TEXTS = t => { REC = []; window.render(t); const r = REC; REC = null; return r; };
+boot();
+</script></body></html>

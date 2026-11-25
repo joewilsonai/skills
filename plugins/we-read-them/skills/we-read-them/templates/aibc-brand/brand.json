@@ -1,0 +1,17 @@
+{
+  "colors": {
+    "ink": "#141312",
+    "cream": "#EFE6D2",
+    "muted": "#B8AD96",
+    "rule": "#2B2824",
+    "stamp": "#C4302B",
+    "accentOnInk": "#E2574F",
+    "paper": "#FBF8F0",
+    "paperInk": "#17150F"
+  },
+  "fonts": {
+    "display": {"family": "Archivo Black", "file": "ArchivoBlack-Regular.ttf", "weight": 400},
+    "label": {"family": "Special Elite", "file": "SpecialElite-Regular.ttf", "weight": 400},
+    "body": {"family": "Inter", "file": "Inter-Variable.ttf", "weight": 400, "captionWeight": 600, "weightRange": "100 900"}
+  }
+}
