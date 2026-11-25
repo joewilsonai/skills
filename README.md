@@ -21,7 +21,11 @@ For an existing installation, refresh the marketplace with `claude plugin market
 
 ### we-read-them
 
-**We Read Them** follows an investigation through the primary record. Cases can cover business, sports, public affairs, true crime or the history of ideas. A countdown pairs each finding with the filing, original footage, testimony, text or artifact that lets the viewer check it.
+**We Read Them turns one question into a YouTube documentary and ten standalone Shorts.** Give it a question about sports, business, technology, history or true crime. It checks claims against original records and footage, then builds a countdown where each finding helps answer the question. Viewers see the evidence on screen and hear why it matters.
+
+Before recording, two independent AI reviewers explain the opening in their own words and flag unfamiliar terms or gaps in the story. The producing agent revises the script, checks pronunciation in the finished audio and prepares chapters, captions and thumbnails.
+
+See how one investigation works at two lengths. [Watch the 8-minute Karen Read documentary](https://www.youtube.com/watch?v=8j7-IBt2jno) or [watch the 39-second Short about the jury’s question](https://www.youtube.com/shorts/kR4Rx8rfev0).
 
 Once it's installed, ask Claude Code for it in plain words: "We Read Them on <case>", "make reels of <case>", "top 10 things you didn't know about <case>". The skill picks up from there.
 
